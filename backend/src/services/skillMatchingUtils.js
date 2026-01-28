@@ -158,36 +158,94 @@ function extractRequiredTechs(jobDescription) {
  */
 function detectContradictions(cvText, reasoning, requiredTechs) {
   const warnings = [];
-  const reasoningLower = reasoning.toLowerCase();
+  const reasoningNormalized = normalizeText(reasoning);
   
   // Patrones que indican "falta algo"
   const missingPatterns = [
-    /no\s+menciona/i,
-    /no\s+tiene/i,
-    /falta/i,
-    /carece/i,
-    /sin\s+experiencia\s+en/i,
-    /no\s+posee/i,
-    /ausencia\s+de/i,
+    'no menciona',
+    'no tiene',
+    'falta',
+    'carece',
+    'sin experiencia en',
+    'no posee',
+    'ausencia de',
   ];
   
+  // Primero, identificar TODAS las tecnologías mencionadas en el reasoning
+  // para evitar falsos positivos por sub-strings (ej: "js" dentro de "nest js")
+  const allMentionedTechs = new Set();
+  
   for (const tech of requiredTechs) {
-    // Si el reasoning sugiere que falta esta tech
     const techVariants = buildTechVariants(tech);
-    const mightBeMissing = missingPatterns.some(pattern => {
-      const match = reasoningLower.match(pattern);
-      if (!match) return false;
-      
-      // Verificar si alguna variante de la tech aparece cerca del patrón
-      const context = reasoningLower.slice(
-        Math.max(0, match.index - 20),
-        Math.min(reasoningLower.length, match.index + match[0].length + 20)
-      );
-      
-      return techVariants.some(variant => context.includes(variant));
-    });
     
-    // Pero la tech SÍ está en el CV
+    // Verificar si esta tech está mencionada EN CUALQUIER PARTE del reasoning
+    for (const variant of techVariants) {
+      const escapedVariant = variant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b${escapedVariant}\\b`);
+      
+      if (regex.test(reasoningNormalized)) {
+        allMentionedTechs.add(tech);
+        break;
+      }
+    }
+  }
+  
+  // Ahora detectar contradicciones solo para techs mencionadas cerca de patrones negativos
+  for (const tech of requiredTechs) {
+    const techVariants = buildTechVariants(tech);
+    
+    // Verificar si el reasoning menciona que falta esta tech
+    let mightBeMissing = false;
+    
+    for (const pattern of missingPatterns) {
+      const patternIndex = reasoningNormalized.indexOf(pattern);
+      if (patternIndex === -1) continue;
+      
+      // Extraer contexto alrededor del patrón (50 chars antes y después)
+      const contextStart = Math.max(0, patternIndex - 50);
+      const contextEnd = Math.min(reasoningNormalized.length, patternIndex + pattern.length + 50);
+      const context = reasoningNormalized.slice(contextStart, contextEnd);
+      
+      // Verificar si ESTA TECH ESPECÍFICA aparece en el contexto negativo
+      // Solo considerar si la tech tiene una variante que aparece COMPLETA en el contexto
+      for (const variant of techVariants) {
+        const escapedVariant = variant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\b${escapedVariant}\\b`);
+        
+        if (regex.test(context)) {
+          // Verificar que no sea un sub-string de otra tech más larga
+          // Por ejemplo: "js" no debe matchear si "nest js" está en el contexto
+          let isPartOfLongerTech = false;
+          
+          for (const otherTech of allMentionedTechs) {
+            if (otherTech === tech) continue; // Skip self
+            
+            const otherVariants = buildTechVariants(otherTech);
+            for (const otherVariant of otherVariants) {
+              // Si otra tech contiene esta variante, es un substring
+              if (otherVariant.includes(variant) && otherVariant !== variant) {
+                const escapedOther = otherVariant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const otherRegex = new RegExp(`\\b${escapedOther}\\b`);
+                if (otherRegex.test(context)) {
+                  isPartOfLongerTech = true;
+                  break;
+                }
+              }
+            }
+            if (isPartOfLongerTech) break;
+          }
+          
+          if (!isPartOfLongerTech) {
+            mightBeMissing = true;
+            break;
+          }
+        }
+      }
+      
+      if (mightBeMissing) break;
+    }
+    
+    // Si el reasoning dice que falta PERO la tech SÍ está en el CV
     if (mightBeMissing && isTechPresent(cvText, tech)) {
       warnings.push(`Posible falso negativo: "${tech}" está en el CV pero el reasoning sugiere que falta`);
     }
