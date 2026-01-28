@@ -135,6 +135,19 @@ async function getJob(jobId) {
     const response = await leverApi.get(`/postings/${jobId}`);
     const posting = response.data.data;
 
+    // Extraer TODAS las listas (no solo Requirements y Responsibilities)
+    let allLists = '';
+    if (posting.content?.lists && Array.isArray(posting.content.lists)) {
+      posting.content.lists.forEach(list => {
+        if (list.text && list.content) {
+          allLists += `\n${list.text}:\n${list.content}\n`;
+        }
+      });
+    }
+
+    // Extraer texto adicional si existe
+    const additionalText = posting.content?.closing || '';
+
     return {
       id: posting.id,
       title: posting.text,
@@ -144,6 +157,9 @@ async function getJob(jobId) {
       status: posting.state,
       description: posting.content?.description || '',
       descriptionPlain: posting.content?.descriptionPlain || '',
+      lists: allLists, // TODAS las listas juntas
+      additionalText: additionalText,
+      // Mantener los campos viejos por compatibilidad
       requirements: posting.content?.lists?.find(l => l.text === 'Requirements')?.content || '',
       responsibilities: posting.content?.lists?.find(l => l.text === 'Responsibilities')?.content || ''
     };

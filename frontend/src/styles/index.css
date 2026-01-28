@@ -127,6 +127,18 @@ body {
   gap: var(--spacing-md);
 }
 
+.logo-image {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+
+.logo-image:hover {
+  transform: scale(1.05);
+}
+
+/* Estilos legacy para compatibilidad */
 .logo-icon {
   width: 44px;
   height: 44px;

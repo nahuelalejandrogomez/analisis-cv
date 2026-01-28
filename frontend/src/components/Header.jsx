@@ -5,9 +5,11 @@ function Header({ onRefresh }) {
     <header className="header">
       <div className="header-content">
         <div className="logo">
-          <div className="logo-icon">
-            <span className="logo-r">R</span>
-          </div>
+          <img 
+            src="/Logos/REDBEE-MARCA.png" 
+            alt="Redbee Logo" 
+            className="logo-image"
+          />
           <div className="logo-text">
             <h1>CV Evaluator</h1>
             <span className="brand">by Redbee</span>

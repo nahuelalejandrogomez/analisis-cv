@@ -121,11 +121,9 @@ Ubicación: ${job.location}
 Descripción:
 ${job.descriptionPlain || job.description}
 
-Requisitos:
-${job.requirements}
+${job.lists || ''}
 
-Responsabilidades:
-${job.responsibilities}
+${job.additionalText || ''}
   `.trim();
 
   // Get CV text
