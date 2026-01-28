@@ -16,7 +16,8 @@ async function runMigrations() {
     // Run all migrations in order
     const migrations = [
       '001_create_tables.sql',
-      '002_add_cv_metadata.sql'
+      '002_add_cv_metadata.sql',
+      '002_fix_no_cv_evaluations.sql'
     ];
 
     for (const migrationFile of migrations) {
