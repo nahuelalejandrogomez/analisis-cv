@@ -105,3 +105,14 @@ export async function getEvaluationStats(jobId) {
 export async function deleteEvaluation(id) {
   return fetchAPI(`/evaluations/${id}`, { method: 'DELETE' });
 }
+
+/**
+ * Get resume download URL
+ */
+export function getResumeDownloadUrl(candidateId, resumeId, candidateName) {
+  const params = new URLSearchParams({
+    resumeId,
+    name: candidateName || 'candidato'
+  });
+  return `${API_URL}/candidates/${candidateId}/resume/download?${params}`;
+}

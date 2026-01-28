@@ -386,3 +386,59 @@
   padding: 4px 8px;
   border-radius: var(--radius-sm);
 }
+
+/* LinkedIn Column */
+.td-linkedin {
+  text-align: center;
+  width: 70px;
+}
+
+.linkedin-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0A66C2;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.linkedin-link:hover {
+  background: rgba(10, 102, 194, 0.1);
+  transform: scale(1.1);
+}
+
+.no-linkedin {
+  color: var(--gray-400);
+}
+
+/* Download Button */
+.td-cv {
+  text-align: center;
+  width: 70px;
+}
+
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--gray-600);
+  padding: 6px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.download-btn:hover {
+  background: var(--gray-100);
+  color: var(--red-primary);
+  transform: scale(1.1);
+}
+
+.download-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none;
+}

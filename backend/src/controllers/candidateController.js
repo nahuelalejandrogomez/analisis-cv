@@ -60,7 +60,36 @@ async function getCVText(req, res, next) {
   }
 }
 
+/**
+ * GET /api/candidates/:candidateId/resume/download
+ * Download CV file for a specific candidate
+ */
+async function downloadResume(req, res, next) {
+  try {
+    const { candidateId } = req.params;
+    const { resumeId, name } = req.query;
+
+    if (!resumeId) {
+      return res.status(400).json({ error: 'resumeId is required' });
+    }
+
+    // Download from Lever
+    const pdfBuffer = await leverService.downloadResume(candidateId, resumeId);
+
+    // Set headers for file download
+    const filename = `CV_${(name || 'candidato').replace(/\s+/g, '_')}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    res.send(pdfBuffer);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   getCandidates,
-  getCVText
+  getCVText,
+  downloadResume
 };

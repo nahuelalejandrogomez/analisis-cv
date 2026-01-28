@@ -94,6 +94,15 @@ async function getCandidates(jobId) {
           console.log(`No resume found for opportunity ${opp.id}`);
         }
 
+        // Buscar LinkedIn en links
+        const linkedinLink = opp.links?.find(link =>
+          link.toLowerCase?.().includes('linkedin') ||
+          (typeof link === 'object' && link.value?.toLowerCase?.().includes('linkedin'))
+        );
+        const linkedinUrl = typeof linkedinLink === 'string'
+          ? linkedinLink
+          : linkedinLink?.value || null;
+
         return {
           id: opp.id,
           name: opp.name || 'Unknown',
@@ -103,6 +112,7 @@ async function getCandidates(jobId) {
           resumeUrl,
           resumeFileId,
           hasResume: !!resumeUrl,
+          linkedinUrl,
           createdAt: opp.createdAt,
           source: opp.sources?.[0] || 'Direct'
         };
