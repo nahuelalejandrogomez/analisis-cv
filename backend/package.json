@@ -8,8 +8,10 @@
   },
   "scripts": {
     "start": "node src/server.js",
+    "build": "echo 'No build required'",
     "dev": "nodemon src/server.js",
-    "migrate": "node src/migrations/run.js"
+    "migrate": "node src/migrations/run.js",
+    "postinstall": "npm run migrate || true"
   },
   "dependencies": {
     "express": "^4.18.2",
