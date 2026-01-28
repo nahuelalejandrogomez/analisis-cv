@@ -40,7 +40,7 @@ export default function JobContextPanel({ job }) {
       {/* Secciones colapsables */}
       <div className="job-context-sections">
         {/* Descripción */}
-        {job.descriptionPlain && (
+        {(job.descriptionPlain || job.description) && (
           <div className="collapsible-section">
             <button
               className="section-toggle"
@@ -49,17 +49,57 @@ export default function JobContextPanel({ job }) {
               <span className="toggle-icon">
                 {expandedSection === 'description' ? '▼' : '▶'}
               </span>
-              Descripción
+              Descripción del Puesto
             </button>
             {expandedSection === 'description' && (
               <div className="section-content">
-                <pre>{job.descriptionPlain}</pre>
+                <pre>{job.descriptionPlain || job.description}</pre>
               </div>
             )}
           </div>
         )}
 
-        {/* Requisitos */}
+        {/* Lists - Todas las secciones del job */}
+        {job.lists && (
+          <div className="collapsible-section">
+            <button
+              className="section-toggle"
+              onClick={() => toggleSection('lists')}
+            >
+              <span className="toggle-icon">
+                {expandedSection === 'lists' ? '▼' : '▶'}
+              </span>
+              Requisitos y Responsabilidades (usado para evaluar)
+            </button>
+            {expandedSection === 'lists' && (
+              <div className="section-content">
+                <pre>{job.lists}</pre>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Texto adicional */}
+        {job.additionalText && (
+          <div className="collapsible-section">
+            <button
+              className="section-toggle"
+              onClick={() => toggleSection('additional')}
+            >
+              <span className="toggle-icon">
+                {expandedSection === 'additional' ? '▼' : '▶'}
+              </span>
+              Información Adicional
+            </button>
+            {expandedSection === 'additional' && (
+              <div className="section-content">
+                <pre>{job.additionalText}</pre>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Fallback: Requirements y Responsibilities (si existen por separado) */}
         {job.requirements && (
           <div className="collapsible-section">
             <button
@@ -69,7 +109,7 @@ export default function JobContextPanel({ job }) {
               <span className="toggle-icon">
                 {expandedSection === 'requirements' ? '▼' : '▶'}
               </span>
-              Requisitos (usados para evaluar)
+              Requisitos
             </button>
             {expandedSection === 'requirements' && (
               <div className="section-content">
@@ -79,7 +119,6 @@ export default function JobContextPanel({ job }) {
           </div>
         )}
 
-        {/* Responsabilidades */}
         {job.responsibilities && (
           <div className="collapsible-section">
             <button
