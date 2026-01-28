@@ -2,10 +2,29 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 const routes = require('./routes');
+const db = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Run migrations on startup
+async function runMigrations() {
+  try {
+    console.log('Running database migrations...');
+    const migrationPath = path.join(__dirname, 'migrations', '001_create_tables.sql');
+    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+    await db.query(migrationSQL);
+    console.log('Database migrations completed successfully');
+  } catch (error) {
+    console.error('Migration error:', error.message);
+    // Don't exit - table might already exist
+  }
+}
+
+runMigrations();
 
 // CORS configuration
 const allowedOrigins = [
