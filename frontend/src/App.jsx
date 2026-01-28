@@ -63,7 +63,8 @@ function App() {
       // Load full job details (including descriptionPlain, requirements, responsibilities)
       try {
         console.log('[App] Fetching full job details...');
-        const fullJob = await api.getJob(job.id);
+        const response = await api.getJob(job.id);
+        const fullJob = response.job; // Backend returns { job: {...} }
         console.log('[App] Full job loaded:', fullJob);
         setSelectedJob(fullJob);
         loadCandidates(job.id);
