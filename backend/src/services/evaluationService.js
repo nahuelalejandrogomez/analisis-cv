@@ -31,10 +31,22 @@ async function getCVText(opportunityId) {
 
     if (!resumeData) {
       console.log(`[CV Extract] No se encontró resume data en Lever para: ${opportunityId}`);
-      return { text: '', source: 'none' };
+      return { 
+        text: '', 
+        source: 'none',
+        metadata: null
+      };
     }
 
     console.log(`[CV Extract] Resume encontrado - ID: ${resumeData.id}, FileName: ${resumeData.fileName}`);
+
+    // Prepare metadata
+    const metadata = {
+      fileName: resumeData.fileName || null,
+      fileUrl: resumeData.downloadUrl || null,
+      fileSize: null, // We don't have this from Lever API
+      extractionMethod: null // Will be set below
+    };
 
     // If Lever has parsed data, use it
     if (resumeData.parsedData) {
@@ -63,7 +75,8 @@ async function getCVText(opportunityId) {
 
       if (text) {
         console.log(`[CV Extract] Texto extraído de parsedData: ${text.length} caracteres`);
-        return { text, source: 'lever_parsed' };
+        metadata.extractionMethod = 'lever_parsed';
+        return { text, source: 'lever_parsed', metadata };
       }
     }
 
@@ -73,11 +86,14 @@ async function getCVText(opportunityId) {
       try {
         const pdfBuffer = await leverService.downloadResume(opportunityId, resumeData.id);
         console.log(`[CV Extract] PDF descargado: ${pdfBuffer.length} bytes`);
+        metadata.fileSize = pdfBuffer.length;
+        
         const text = await extractTextFromPDF(pdfBuffer);
         console.log(`[CV Extract] Texto extraído del PDF: ${text.length} caracteres`);
         
         if (text && text.length > 0) {
-          return { text, source: 'pdf_extracted' };
+          metadata.extractionMethod = 'pdf_extracted';
+          return { text, source: 'pdf_extracted', metadata };
         } else {
           console.warn(`[CV Extract] PDF descargado pero no se pudo extraer texto`);
         }
@@ -87,10 +103,10 @@ async function getCVText(opportunityId) {
     }
 
     console.log(`[CV Extract] No se pudo obtener contenido del CV para: ${opportunityId}`);
-    return { text: '', source: 'none' };
+    return { text: '', source: 'none', metadata };
   } catch (error) {
     console.error(`[CV Extract] Error general getting CV text:`, error.message);
-    return { text: '', source: 'error' };
+    return { text: '', source: 'error', metadata: null };
   }
 }
 
@@ -127,7 +143,7 @@ ${job.additionalText || ''}
   `.trim();
 
   // Get CV text
-  const { text: cvText, source: cvSource } = await getCVText(candidateId);
+  const { text: cvText, source: cvSource, metadata: cvMetadata } = await getCVText(candidateId);
   
   console.log(`[Evaluation] Candidato: ${candidateName} (${candidateId})`);
   console.log(`[Evaluation] CV Source: ${cvSource}, Length: ${cvText?.length || 0} caracteres`);
@@ -148,7 +164,8 @@ ${job.additionalText || ''}
       candidateName,
       candidateEmail,
       ...evaluation,
-      cvText: cvText || ''
+      cvText: cvText || '',
+      cvMetadata
     });
 
     return {
@@ -171,7 +188,8 @@ ${job.additionalText || ''}
     candidateName,
     candidateEmail,
     ...evaluation,
-    cvText
+    cvText,
+    cvMetadata
   });
 
   return {
@@ -190,13 +208,18 @@ async function saveEvaluation(data) {
   const query = `
     INSERT INTO evaluations (
       job_id, job_title, candidate_id, candidate_name, candidate_email,
-      evaluation_status, reasoning, cv_text
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      evaluation_status, reasoning, cv_text,
+      cv_file_name, cv_file_url, cv_file_size, cv_extraction_method
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     ON CONFLICT (job_id, candidate_id)
     DO UPDATE SET
       evaluation_status = $6,
       reasoning = $7,
       cv_text = $8,
+      cv_file_name = $9,
+      cv_file_url = $10,
+      cv_file_size = $11,
+      cv_extraction_method = $12,
       evaluated_at = CURRENT_TIMESTAMP
     RETURNING *
   `;
@@ -209,7 +232,11 @@ async function saveEvaluation(data) {
     data.candidateEmail,
     data.status,
     data.reasoning,
-    data.cvText
+    data.cvText,
+    data.cvMetadata?.fileName || null,
+    data.cvMetadata?.fileUrl || null,
+    data.cvMetadata?.fileSize || null,
+    data.cvMetadata?.extractionMethod || null
   ];
 
   const result = await db.query(query, values);

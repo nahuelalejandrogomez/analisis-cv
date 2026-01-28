@@ -21,6 +21,10 @@ async function getCandidates(req, res, next) {
         reasoning: e.reasoning,
         cv_text: e.cv_text, // OBJETIVO B: Include CV text for audit modal
         cvText: e.cv_text,  // Alias for compatibility
+        cv_file_name: e.cv_file_name, // CV file metadata
+        cv_file_url: e.cv_file_url,
+        cv_file_size: e.cv_file_size,
+        cv_extraction_method: e.cv_extraction_method,
         evaluatedAt: e.evaluated_at
       };
     });

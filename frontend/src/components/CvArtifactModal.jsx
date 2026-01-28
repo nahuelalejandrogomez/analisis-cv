@@ -67,23 +67,42 @@ export default function CvArtifactModal({ candidate, onClose }) {
         {/* Metadata (si existe en el futuro) */}
         <div className="artifact-metadata">
           <details>
-            <summary>Metadata (diagnóstico)</summary>
+            <summary>Metadata del archivo CV</summary>
             <div className="metadata-content">
+              <div className="metadata-item">
+                <strong>Nombre del archivo:</strong> 
+                <span>{candidate.evaluation.cv_file_name || <em>No disponible</em>}</span>
+              </div>
+              <div className="metadata-item">
+                <strong>Tamaño:</strong> 
+                <span>
+                  {candidate.evaluation.cv_file_size 
+                    ? `${Math.round(candidate.evaluation.cv_file_size / 1024)} KB` 
+                    : <em>No disponible</em>}
+                </span>
+              </div>
+              <div className="metadata-item">
+                <strong>Método de extracción:</strong> 
+                <span className="code">
+                  {candidate.evaluation.cv_extraction_method || 'No disponible'}
+                </span>
+              </div>
               <div className="metadata-item">
                 <strong>extractedCharCount:</strong> {cvText?.length || 0}
               </div>
-              <div className="metadata-item">
-                <strong>extractionMethod:</strong> <span className="code">pdf-parse</span>
-              </div>
-              <div className="metadata-item">
-                <strong>originalFileName:</strong> <em>No disponible (campo futuro)</em>
-              </div>
-              <div className="metadata-item">
-                <strong>originalFileUrl:</strong> <em>No disponible (campo futuro)</em>
-              </div>
-              <div className="metadata-item">
-                <strong>parseWarnings:</strong> <em>No implementado</em>
-              </div>
+              {candidate.evaluation.cv_file_url && (
+                <div className="metadata-item" style={{ marginTop: '12px' }}>
+                  <a 
+                    href={candidate.evaluation.cv_file_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    📥 Descargar CV original desde Lever
+                  </a>
+                </div>
+              )}
             </div>
           </details>
         </div>
