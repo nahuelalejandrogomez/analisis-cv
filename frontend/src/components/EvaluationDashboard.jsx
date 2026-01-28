@@ -10,16 +10,6 @@ export default function EvaluationDashboard({ jobId, onFilterChange }) {
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState(null);
 
-  useEffect(() => {
-    if (!jobId) {
-      setSummary(null);
-      setLoading(false);
-      return;
-    }
-
-    loadSummary();
-  }, [jobId]);
-
   async function loadSummary() {
     try {
       setLoading(true);
@@ -37,6 +27,16 @@ export default function EvaluationDashboard({ jobId, onFilterChange }) {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!jobId) {
+      setSummary(null);
+      setLoading(false);
+      return;
+    }
+
+    loadSummary();
+  }, [jobId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleCardClick(status) {
     // Toggle filter: if already active, reset; otherwise set new filter
