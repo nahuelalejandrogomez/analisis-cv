@@ -82,9 +82,9 @@ async function getCVText(opportunityId) {
 
     // If no parsed data, download and parse PDF
     if (resumeData.id) {
-      console.log(`[CV Extract] No hay parsedData, intentando descargar PDF...`);
+      console.log(`[CV Extract] No hay parsedData, intentando descargar PDF desde: ${resumeData.source || 'resumes'}`);
       try {
-        const pdfBuffer = await leverService.downloadResume(opportunityId, resumeData.id);
+        const pdfBuffer = await leverService.downloadResume(opportunityId, resumeData.id, resumeData.source);
         console.log(`[CV Extract] PDF descargado: ${pdfBuffer.length} bytes`);
         metadata.fileSize = pdfBuffer.length;
         

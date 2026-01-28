@@ -84,6 +84,7 @@ async function getCandidates(jobId) {
         let resumeFileId = null;
 
         try {
+          // Try /resumes endpoint first
           const filesResponse = await leverApi.get(`/opportunities/${opp.id}/resumes`);
           if (filesResponse.data.data && filesResponse.data.data.length > 0) {
             const resume = filesResponse.data.data[0];
@@ -91,7 +92,29 @@ async function getCandidates(jobId) {
             resumeUrl = resume.file?.downloadUrl || null;
           }
         } catch (e) {
-          console.log(`No resume found for opportunity ${opp.id}`);
+          console.log(`No resume found in /resumes for opportunity ${opp.id}`);
+        }
+
+        // If no resume found, try /files endpoint
+        if (!resumeFileId) {
+          try {
+            const filesResponse = await leverApi.get(`/opportunities/${opp.id}/files`);
+            if (filesResponse.data.data && filesResponse.data.data.length > 0) {
+              // Look for PDF files (likely CVs)
+              const pdfFile = filesResponse.data.data.find(f => 
+                f.name?.toLowerCase().endsWith('.pdf') || 
+                f.name?.toLowerCase().includes('cv') ||
+                f.name?.toLowerCase().includes('resume')
+              );
+              if (pdfFile) {
+                resumeFileId = pdfFile.id;
+                resumeUrl = pdfFile.downloadUrl || null;
+                console.log(`Found CV in /files for opportunity ${opp.id}: ${pdfFile.name}`);
+              }
+            }
+          } catch (e) {
+            console.log(`No files found in /files for opportunity ${opp.id}`);
+          }
         }
 
         // Buscar LinkedIn en links
@@ -173,13 +196,15 @@ async function getJob(jobId) {
  * Download resume content from Lever
  * @param {string} opportunityId - The opportunity ID
  * @param {string} resumeId - The resume file ID
+ * @param {string} source - 'resumes' or 'files' endpoint
  */
-async function downloadResume(opportunityId, resumeId) {
+async function downloadResume(opportunityId, resumeId, source = 'resumes') {
   try {
-    const response = await leverApi.get(
-      `/opportunities/${opportunityId}/resumes/${resumeId}/download`,
-      { responseType: 'arraybuffer' }
-    );
+    const endpoint = source === 'files' 
+      ? `/opportunities/${opportunityId}/files/${resumeId}/download`
+      : `/opportunities/${opportunityId}/resumes/${resumeId}/download`;
+    
+    const response = await leverApi.get(endpoint, { responseType: 'arraybuffer' });
     return response.data;
   } catch (error) {
     console.error('Error downloading resume:', error.response?.data || error.message);
@@ -193,6 +218,7 @@ async function downloadResume(opportunityId, resumeId) {
  */
 async function getResumeParsedData(opportunityId) {
   try {
+    // Try /resumes endpoint first
     const response = await leverApi.get(`/opportunities/${opportunityId}/resumes`);
     if (response.data.data && response.data.data.length > 0) {
       const resume = response.data.data[0];
@@ -200,14 +226,41 @@ async function getResumeParsedData(opportunityId) {
         id: resume.id,
         fileName: resume.file?.name || 'resume.pdf',
         parsedData: resume.parsedData || null,
-        downloadUrl: resume.file?.downloadUrl || null
+        downloadUrl: resume.file?.downloadUrl || null,
+        source: 'resumes'
       };
     }
-    return null;
   } catch (error) {
-    console.error('Error getting resume data:', error.message);
-    return null;
+    console.log('No resume in /resumes endpoint:', error.message);
   }
+
+  // If no resume found, try /files endpoint
+  try {
+    const filesResponse = await leverApi.get(`/opportunities/${opportunityId}/files`);
+    if (filesResponse.data.data && filesResponse.data.data.length > 0) {
+      // Look for PDF files (likely CVs)
+      const pdfFile = filesResponse.data.data.find(f => 
+        f.name?.toLowerCase().endsWith('.pdf') || 
+        f.name?.toLowerCase().includes('cv') ||
+        f.name?.toLowerCase().includes('resume') ||
+        f.name?.toLowerCase().includes('curriculum')
+      );
+      
+      if (pdfFile) {
+        return {
+          id: pdfFile.id,
+          fileName: pdfFile.name || 'cv.pdf',
+          parsedData: null, // Files endpoint doesn't have parsed data
+          downloadUrl: pdfFile.downloadUrl || null,
+          source: 'files'
+        };
+      }
+    }
+  } catch (error) {
+    console.log('No files in /files endpoint:', error.message);
+  }
+
+  return null;
 }
 
 /**
