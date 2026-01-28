@@ -29,18 +29,24 @@ function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV 
 
   const handleDownloadCV = async (candidate) => {
     try {
+      console.log('[Download CV] Obteniendo metadata para:', candidate.name, candidate.id);
+      
       // Obtener metadata del CV desde Lever en tiempo real
       const metadata = await api.getCVMetadata(candidate.id);
       
+      console.log('[Download CV] Metadata recibida:', metadata);
+      
       if (metadata && metadata.hasCV && metadata.downloadUrl) {
+        console.log('[Download CV] Abriendo URL:', metadata.downloadUrl);
         // Abrir URL de descarga directamente
         window.open(metadata.downloadUrl, '_blank');
       } else {
-        alert('No se encontró CV disponible para este candidato en Lever');
+        console.warn('[Download CV] No se encontró CV. Metadata:', metadata);
+        alert(`No se encontró CV disponible para ${candidate.name} en Lever`);
       }
     } catch (error) {
-      console.error('Error descargando CV:', error);
-      alert('Error al obtener el CV. Por favor intenta nuevamente.');
+      console.error('[Download CV] Error:', error);
+      alert(`Error al obtener el CV de ${candidate.name}. Por favor intenta nuevamente.\n\nError: ${error.message}`);
     }
   };
 

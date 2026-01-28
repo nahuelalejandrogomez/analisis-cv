@@ -15,14 +15,18 @@ export default function CvArtifactModal({ candidate, onClose }) {
 
   useEffect(() => {
     if (candidate?.id) {
+      console.log('[CV Metadata Modal] Obteniendo metadata para:', candidate.name, candidate.id);
+      setLoadingMetadata(true);
+      
       // Obtener metadata del CV desde Lever API (siempre fresco)
       api.getCVMetadata(candidate.id)
         .then(data => {
+          console.log('[CV Metadata Modal] Metadata recibida:', data);
           setCvMetadata(data);
           setLoadingMetadata(false);
         })
         .catch(err => {
-          console.error('Error obteniendo CV metadata:', err);
+          console.error('[CV Metadata Modal] Error obteniendo CV metadata:', err);
           setLoadingMetadata(false);
         });
     }
