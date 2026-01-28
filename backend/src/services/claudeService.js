@@ -4,29 +4,32 @@ const anthropic = new Anthropic({
   apiKey: process.env.CLAUDE_API_KEY
 });
 
+// Usar Haiku para evaluaciones (más rápido y económico)
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-5-haiku-20241022';
+
 const EVALUATION_PROMPT = `Eres un especialista en RRHH evaluando candidatos para una empresa de tecnología.
 
-Job Description:
+**DESCRIPCIÓN DEL JOB:**
 {jobDescription}
 
-Candidato CV:
+**CV DEL CANDIDATO:**
 {cvText}
 
-Evalúa si el candidato aplica para el rol. Responde SOLO en JSON válido:
+**TAREA:**
+Evalúa si el candidato aplica para esta posición.
+
+Responde ÚNICAMENTE en JSON (sin markdown, sin explicación adicional):
 {
   "status": "VERDE" | "AMARILLO" | "ROJO",
-  "reasoning": "Explicación breve (2-3 líneas) de por qué"
+  "reasoning": "Máximo 30 palabras explicando por qué ese color"
 }
 
-CRITERIOS:
-- VERDE: Cumple con 80-100% de requisitos técnicos + experiencia suficiente. Es un candidato fuerte.
-- AMARILLO: Cumple 60-80% de requisitos. Tiene potencial pero falta algo relevante. Vale la pena revisar.
-- ROJO: Cumple <60% de requisitos o falta tecnología/experiencia crítica. No es un buen fit.
+**CRITERIOS:**
+- VERDE: Cumple 100% de requisitos técnicos + experiencia
+- AMARILLO: Cumple 70-90% de requisitos, falta algo menor
+- ROJO: Cumple <70% de requisitos o falta tech crítica
 
-IMPORTANTE:
-- Sé objetivo y basa tu evaluación en hechos del CV
-- Si el CV está vacío o no se puede leer, responde ROJO con razón "CV no disponible o ilegible"
-- Responde SOLO el JSON, sin texto adicional, sin markdown, sin backticks`;
+El reasoning DEBE ser máximo 30 palabras. Sé conciso.`;
 
 /**
  * Evaluate a candidate's CV against a job description
@@ -41,8 +44,8 @@ async function evaluateCV(jobDescription, cvText) {
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
+      model: CLAUDE_MODEL,
+      max_tokens: 200,
       messages: [
         {
           role: 'user',
@@ -80,6 +83,13 @@ async function evaluateCV(jobDescription, cvText) {
     }
     if (!evaluation.reasoning) {
       evaluation.reasoning = 'Sin razón especificada';
+    }
+
+    // Limitar a 30 palabras
+    const words = evaluation.reasoning.split(/\s+/);
+    if (words.length > 30) {
+      console.log(`Reasoning excede 30 palabras (${words.length}). Truncando...`);
+      evaluation.reasoning = words.slice(0, 30).join(' ') + '...';
     }
 
     return evaluation;
