@@ -44,76 +44,99 @@ async function getCVText(opportunityId) {
     const metadata = {
       fileName: resumeData.fileName || null,
       fileUrl: resumeData.downloadUrl || null,
-      fileSize: null, // We don't have this from Lever API
-      extractionMethod: null // Will be set below
+      fileSize: null,
+      extractionMethod: null
     };
 
-    // If Lever has parsed data, use it
+    let finalText = '';
+    let extractionMethods = [];
+
+    // Strategy 1: Try Lever's parsed data first
     if (resumeData.parsedData) {
       console.log(`[CV Extract] Lever tiene parsedData disponible`);
       const parsed = resumeData.parsedData;
-      let text = '';
+      let parsedText = '';
 
       if (parsed.positions) {
-        text += 'EXPERIENCIA:\n';
+        parsedText += 'EXPERIENCIA:\n';
         parsed.positions.forEach(p => {
-          text += `- ${p.title || ''} en ${p.org || ''} (${p.start || ''} - ${p.end || 'Presente'})\n`;
-          if (p.summary) text += `  ${p.summary}\n`;
+          parsedText += `- ${p.title || ''} en ${p.org || ''} (${p.start || ''} - ${p.end || 'Presente'})\n`;
+          if (p.summary) parsedText += `  ${p.summary}\n`;
         });
       }
 
       if (parsed.schools) {
-        text += '\nEDUCACIÓN:\n';
+        parsedText += '\nEDUCACIÓN:\n';
         parsed.schools.forEach(s => {
-          text += `- ${s.degree || ''} en ${s.org || ''} (${s.end || ''})\n`;
+          parsedText += `- ${s.degree || ''} en ${s.org || ''} (${s.end || ''})\n`;
         });
       }
 
       if (parsed.skills) {
-        text += `\nSKILLS: ${parsed.skills.join(', ')}\n`;
+        parsedText += `\nSKILLS: ${parsed.skills.join(', ')}\n`;
       }
 
-      if (text) {
-        console.log(`[CV Extract] Texto extraído de parsedData: ${text.length} caracteres`);
-        metadata.extractionMethod = 'lever_parsed';
-        return { text, source: 'lever_parsed', metadata };
+      if (parsedText.length > 50) {
+        console.log(`[CV Extract] Texto extraído de parsedData: ${parsedText.length} caracteres`);
+        finalText = parsedText;
+        extractionMethods.push('lever_parsed');
       }
     }
 
-    // If no parsed data, download and parse PDF
+    // Strategy 2: ALWAYS try to download and extract PDF (even if parsedData exists)
+    // This ensures we get the full CV content
     if (resumeData.id) {
-      console.log(`[CV Extract] No hay parsedData, intentando descargar PDF desde: ${resumeData.source || 'resumes'}`);
+      console.log(`[CV Extract] Intentando descargar PDF desde: ${resumeData.source || 'resumes'}`);
       try {
         const pdfBuffer = await leverService.downloadResume(opportunityId, resumeData.id, resumeData.source);
         console.log(`[CV Extract] PDF descargado: ${pdfBuffer.length} bytes`);
         metadata.fileSize = pdfBuffer.length;
         
-        const text = await extractTextFromPDF(pdfBuffer);
-        console.log(`[CV Extract] Texto extraído del PDF: ${text.length} caracteres`);
+        const pdfText = await extractTextFromPDF(pdfBuffer);
+        console.log(`[CV Extract] Texto extraído del PDF: ${pdfText.length} caracteres`);
         
-        if (text && text.length > 0) {
-          metadata.extractionMethod = 'pdf_extracted';
-          return { text, source: 'pdf_extracted', metadata };
+        if (pdfText && pdfText.length > 100) {
+          // PDF extraction successful and substantial
+          extractionMethods.push('pdf_extracted');
+          
+          // If PDF has more content than parsedData, use PDF
+          if (pdfText.length > finalText.length * 1.5) {
+            console.log(`[CV Extract] PDF tiene más contenido (${pdfText.length} vs ${finalText.length}), usando PDF`);
+            finalText = pdfText;
+          } else if (finalText.length === 0) {
+            // No parsedData, use PDF
+            finalText = pdfText;
+          } else {
+            // Combine both sources
+            console.log(`[CV Extract] Combinando parsedData y PDF`);
+            finalText = `${finalText}\n\n--- CONTENIDO ADICIONAL DEL PDF ---\n\n${pdfText}`;
+          }
+        } else if (pdfText && pdfText.length > 0) {
+          console.warn(`[CV Extract] PDF extraído pero contenido mínimo: ${pdfText.length} caracteres`);
         } else {
           console.warn(`[CV Extract] PDF descargado pero no se pudo extraer texto`);
-          // IMPORTANTE: Aunque no se extraiga texto, guardamos la URL del archivo
-          metadata.extractionMethod = 'extraction_failed';
-          return { text: '', source: 'extraction_failed', metadata };
+          extractionMethods.push('extraction_failed');
         }
       } catch (downloadError) {
         console.error(`[CV Extract] Error downloading/parsing PDF:`, downloadError.message);
-        // IMPORTANTE: Si hay error descargando, igual guardamos la URL si existe
-        metadata.extractionMethod = 'download_failed';
-        return { text: '', source: 'download_failed', metadata };
+        extractionMethods.push('download_failed');
       }
     }
 
-    console.log(`[CV Extract] No se pudo obtener contenido del CV para: ${opportunityId}`);
-    // IMPORTANTE: Devolvemos metadata aunque no haya texto extraído
-    return { text: '', source: 'none', metadata };
+    // Set extraction method
+    metadata.extractionMethod = extractionMethods.length > 0 
+      ? extractionMethods.join('+') 
+      : 'no_extraction';
+
+    if (finalText.length > 50) {
+      console.log(`[CV Extract] ✅ Extracción exitosa: ${finalText.length} caracteres, método: ${metadata.extractionMethod}`);
+      return { text: finalText, source: metadata.extractionMethod, metadata };
+    } else {
+      console.log(`[CV Extract] ⚠️  No se pudo obtener contenido suficiente del CV (${finalText.length} caracteres)`);
+      return { text: finalText, source: 'insufficient_content', metadata };
+    }
   } catch (error) {
-    console.error(`[CV Extract] Error general getting CV text:`, error.message);
-    // IMPORTANTE: En caso de error general, intentar devolver metadata si existe
+    console.error(`[CV Extract] ❌ Error general getting CV text:`, error.message);
     return { text: '', source: 'error', metadata: null };
   }
 }
