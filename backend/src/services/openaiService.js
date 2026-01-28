@@ -1,4 +1,5 @@
 const OpenAI = require('openai');
+const skillMatchingUtils = require('./skillMatchingUtils');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -13,6 +14,7 @@ const EVALUATION_PROMPT = `Eres un especialista en RRHH evaluando candidatos par
 
 **CV DEL CANDIDATO:**
 {cvText}
+{skillsMetadata}
 
 **TAREA:**
 Evalúa si el candidato aplica para esta posición.
@@ -28,6 +30,10 @@ Responde ÚNICAMENTE en JSON (sin markdown, sin explicación adicional):
 - AMARILLO: Cumple 70-90% de requisitos, falta algo menor
 - ROJO: Cumple <70% de requisitos o falta tech crítica
 
+**GUARDRAIL CRÍTICO:**
+Si una tecnología aparece en el CV (incluyendo variantes como Node.js/NodeJS/Node o NestJS/Nest.js), 
+NO digas que "no la menciona" o "no tiene experiencia". En su lugar, evalúa la PROFUNDIDAD de la experiencia.
+
 El reasoning DEBE ser máximo 30 palabras. Sé conciso.`;
 
 /**
@@ -37,12 +43,20 @@ El reasoning DEBE ser máximo 30 palabras. Sé conciso.`;
  * @returns {Promise<{status: string, reasoning: string}>}
  */
 async function evaluateCV(jobDescription, cvText) {
+  // PRE-LLM: Extraer tecnologías requeridas y detectar cuáles están presentes
+  const requiredTechs = skillMatchingUtils.extractRequiredTechs(jobDescription);
+  const skillsMetadata = skillMatchingUtils.generateSkillsMetadata(cvText, requiredTechs);
+
   const prompt = EVALUATION_PROMPT
     .replace('{jobDescription}', jobDescription)
-    .replace('{cvText}', cvText || 'CV no disponible');
+    .replace('{cvText}', cvText || 'CV no disponible')
+    .replace('{skillsMetadata}', skillsMetadata);
 
   try {
     console.log(`Evaluando con OpenAI (${OPENAI_MODEL})...`);
+    if (requiredTechs.length > 0) {
+      console.log(`Tecnologías requeridas detectadas: ${requiredTechs.join(', ')}`);
+    }
 
     const response = await openai.chat.completions.create({
       model: OPENAI_MODEL,
@@ -90,6 +104,28 @@ async function evaluateCV(jobDescription, cvText) {
     }
     if (!evaluation.reasoning) {
       evaluation.reasoning = 'Sin razón especificada';
+    }
+
+    // POST-LLM GUARDRAIL: Detectar contradicciones
+    const contradictionCheck = skillMatchingUtils.detectContradictions(
+      cvText, 
+      evaluation.reasoning, 
+      requiredTechs
+    );
+
+    if (contradictionCheck.hasContradiction) {
+      console.warn('⚠️  Contradicción detectada:', contradictionCheck.warnings);
+      
+      // Ajustar reasoning para evitar falso negativo
+      // NO cambiar status (mantener decisión del LLM sobre fit general)
+      const presentTechs = requiredTechs.filter(tech => 
+        skillMatchingUtils.isTechPresent(cvText, tech)
+      );
+      
+      if (presentTechs.length > 0) {
+        // Reescribir reasoning de forma conservadora
+        evaluation.reasoning = `Tiene: ${presentTechs.slice(0, 3).join(', ')}. Evaluar profundidad de experiencia en estas tecnologías.`;
+      }
     }
 
     // Limitar a 30 palabras
