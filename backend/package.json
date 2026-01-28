@@ -1,7 +1,7 @@
 {
   "name": "lever-cv-evaluator-backend",
   "version": "1.0.0",
-  "description": "Backend for CV evaluation with Lever API and Claude AI",
+  "description": "Backend for CV evaluation with Lever API and OpenAI",
   "main": "src/server.js",
   "engines": {
     "node": ">=18.0.0"
@@ -20,7 +20,7 @@
     "pg": "^8.11.3",
     "axios": "^1.6.2",
     "pdf-parse": "^1.1.1",
-    "@anthropic-ai/sdk": "^0.52.0"
+    "openai": "^4.52.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

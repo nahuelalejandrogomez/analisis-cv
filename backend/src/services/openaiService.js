@@ -1,11 +1,10 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const OpenAI = require('openai');
 
-const anthropic = new Anthropic({
-  apiKey: process.env.CLAUDE_API_KEY
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
 
-// Usar Haiku para evaluaciones (más rápido y económico)
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-5-haiku-20241022';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
 const EVALUATION_PROMPT = `Eres un especialista en RRHH evaluando candidatos para una empresa de tecnología.
 
@@ -43,8 +42,10 @@ async function evaluateCV(jobDescription, cvText) {
     .replace('{cvText}', cvText || 'CV no disponible');
 
   try {
-    const response = await anthropic.messages.create({
-      model: CLAUDE_MODEL,
+    console.log(`Evaluando con OpenAI (${OPENAI_MODEL})...`);
+
+    const response = await openai.chat.completions.create({
+      model: OPENAI_MODEL,
       max_tokens: 200,
       messages: [
         {
@@ -54,7 +55,8 @@ async function evaluateCV(jobDescription, cvText) {
       ]
     });
 
-    const content = response.content[0].text.trim();
+    const content = response.choices[0].message.content.trim();
+    console.log('Respuesta OpenAI:', content);
 
     // Parse JSON response
     let evaluation;
@@ -67,10 +69,15 @@ async function evaluateCV(jobDescription, cvText) {
         cleanContent = cleanContent.replace(/^```\n?/, '').replace(/\n?```$/, '');
       }
 
+      // Try to extract JSON if wrapped in text
+      const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanContent = jsonMatch[0];
+      }
+
       evaluation = JSON.parse(cleanContent);
     } catch (parseError) {
-      console.error('Failed to parse Claude response:', content);
-      // Return a safe default if parsing fails
+      console.error('Failed to parse OpenAI response:', content);
       return {
         status: 'AMARILLO',
         reasoning: 'Error al procesar la evaluación. Revisar manualmente.'
@@ -92,10 +99,11 @@ async function evaluateCV(jobDescription, cvText) {
       evaluation.reasoning = words.slice(0, 30).join(' ') + '...';
     }
 
+    console.log(`Evaluación completada: ${evaluation.status}`);
     return evaluation;
   } catch (error) {
-    console.error('Error calling Claude API:', error.message);
-    throw new Error(`Claude API error: ${error.message}`);
+    console.error('Error calling OpenAI API:', error.message);
+    throw new Error(`OpenAI API error: ${error.message}`);
   }
 }
 

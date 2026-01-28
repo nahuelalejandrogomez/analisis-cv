@@ -1,6 +1,6 @@
 const db = require('../config/database');
 const leverService = require('./leverService');
-const claudeService = require('./claudeService');
+const openaiService = require('./openaiService');
 const pdfParse = require('pdf-parse');
 
 /**
@@ -141,8 +141,8 @@ ${job.responsibilities}
     };
   }
 
-  // Evaluate with Claude
-  const evaluation = await claudeService.evaluateCV(jobDescription, cvText);
+  // Evaluate with OpenAI
+  const evaluation = await openaiService.evaluateCV(jobDescription, cvText);
 
   // Save to database
   await saveEvaluation({
