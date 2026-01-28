@@ -30,7 +30,7 @@ export default function CvArtifactModal({ candidate, onClose }) {
           setLoadingMetadata(false);
         });
     }
-  }, [candidate?.id]);
+  }, [candidate?.id, candidate?.name]);
 
   if (!candidate || !candidate.evaluation) return null;
 
