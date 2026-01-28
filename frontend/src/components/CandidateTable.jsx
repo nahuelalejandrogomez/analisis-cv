@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getResumeDownloadUrl } from '../api';
+import * as api from '../api';
 
 function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV }) {
   const [selected, setSelected] = useState([]);
@@ -27,10 +27,21 @@ function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV 
     setSelected([]);
   };
 
-  const handleDownloadCV = (candidate) => {
-    if (!candidate.resumeFileId) return;
-    const url = getResumeDownloadUrl(candidate.id, candidate.resumeFileId, candidate.name);
-    window.open(url, '_blank');
+  const handleDownloadCV = async (candidate) => {
+    try {
+      // Obtener metadata del CV desde Lever en tiempo real
+      const metadata = await api.getCVMetadata(candidate.id);
+      
+      if (metadata && metadata.hasCV && metadata.downloadUrl) {
+        // Abrir URL de descarga directamente
+        window.open(metadata.downloadUrl, '_blank');
+      } else {
+        alert('No se encontró CV disponible para este candidato en Lever');
+      }
+    } catch (error) {
+      console.error('Error descargando CV:', error);
+      alert('Error al obtener el CV. Por favor intenta nuevamente.');
+    }
   };
 
   const getStatusBadge = (evaluation) => {

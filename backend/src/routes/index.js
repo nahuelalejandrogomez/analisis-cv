@@ -14,6 +14,7 @@ router.post('/jobs/refresh', jobController.refreshJobs);
 // Candidates routes
 router.get('/jobs/:jobId/candidates', candidateController.getCandidates);
 router.get('/candidates/:candidateId/cv', candidateController.getCVText);
+router.get('/candidates/:candidateId/cv-metadata', candidateController.getCVMetadata);
 router.get('/candidates/:candidateId/resume/download', candidateController.downloadResume);
 
 // Evaluation routes

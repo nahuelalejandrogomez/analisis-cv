@@ -59,6 +59,13 @@ export async function getCVText(candidateId) {
 }
 
 /**
+ * Get CV metadata from Lever API (real-time, always fresh)
+ */
+export async function getCVMetadata(candidateId) {
+  return fetchAPI(`/candidates/${candidateId}/cv-metadata`);
+}
+
+/**
  * Evaluate a single candidate
  */
 export async function evaluateCandidate(jobId, candidate) {

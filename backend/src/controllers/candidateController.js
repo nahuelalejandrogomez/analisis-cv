@@ -67,6 +67,41 @@ async function getCVText(req, res, next) {
 }
 
 /**
+ * GET /api/candidates/:candidateId/cv-metadata
+ * Get CV metadata from Lever API (in real-time, always fresh)
+ */
+async function getCVMetadata(req, res, next) {
+  try {
+    const { candidateId } = req.params;
+    
+    // Obtener metadata actualizada desde Lever API
+    const resumeData = await leverService.getResumeParsedData(candidateId);
+    
+    if (!resumeData) {
+      return res.json({
+        candidateId,
+        hasCV: false,
+        fileName: null,
+        downloadUrl: null,
+        source: null
+      });
+    }
+
+    res.json({
+      candidateId,
+      hasCV: true,
+      fileName: resumeData.fileName,
+      downloadUrl: resumeData.downloadUrl,
+      fileId: resumeData.id,
+      source: resumeData.source // 'resumes' or 'files'
+    });
+  } catch (error) {
+    console.error('Error getting CV metadata:', error.message);
+    next(error);
+  }
+}
+
+/**
  * GET /api/candidates/:candidateId/resume/download
  * Download CV file for a specific candidate
  */
@@ -97,5 +132,6 @@ async function downloadResume(req, res, next) {
 module.exports = {
   getCandidates,
   getCVText,
+  getCVMetadata,
   downloadResume
 };

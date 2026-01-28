@@ -222,11 +222,18 @@ async function getResumeParsedData(opportunityId) {
     const response = await leverApi.get(`/opportunities/${opportunityId}/resumes`);
     if (response.data.data && response.data.data.length > 0) {
       const resume = response.data.data[0];
+      
+      // Si Lever no da downloadUrl, construirla manualmente
+      const downloadUrl = resume.file?.downloadUrl || 
+        `${LEVER_API_BASE}/opportunities/${opportunityId}/resumes/${resume.id}/download`;
+      
+      console.log(`[Lever] Resume encontrado en /resumes - ID: ${resume.id}, URL: ${downloadUrl}`);
+      
       return {
         id: resume.id,
         fileName: resume.file?.name || 'resume.pdf',
         parsedData: resume.parsedData || null,
-        downloadUrl: resume.file?.downloadUrl || null,
+        downloadUrl: downloadUrl,
         source: 'resumes'
       };
     }
@@ -238,20 +245,41 @@ async function getResumeParsedData(opportunityId) {
   try {
     const filesResponse = await leverApi.get(`/opportunities/${opportunityId}/files`);
     if (filesResponse.data.data && filesResponse.data.data.length > 0) {
-      // Look for PDF files (likely CVs)
-      const pdfFile = filesResponse.data.data.find(f => 
+      // Primero buscar PDFs o archivos con nombre de CV
+      let cvFile = filesResponse.data.data.find(f => 
         f.name?.toLowerCase().endsWith('.pdf') || 
         f.name?.toLowerCase().includes('cv') ||
         f.name?.toLowerCase().includes('resume') ||
         f.name?.toLowerCase().includes('curriculum')
       );
       
-      if (pdfFile) {
+      // Si no encuentra ninguno específico, tomar el primer archivo que parezca documento
+      if (!cvFile) {
+        cvFile = filesResponse.data.data.find(f => 
+          f.name?.toLowerCase().endsWith('.doc') ||
+          f.name?.toLowerCase().endsWith('.docx') ||
+          f.name?.toLowerCase().endsWith('.txt')
+        );
+      }
+      
+      // Si aún no hay, tomar el primer archivo disponible
+      if (!cvFile && filesResponse.data.data.length > 0) {
+        cvFile = filesResponse.data.data[0];
+        console.log(`[Lever] No se encontró archivo típico de CV, usando primer archivo: ${cvFile.name}`);
+      }
+      
+      if (cvFile) {
+        // Si Lever no da downloadUrl, construirla manualmente
+        const downloadUrl = cvFile.downloadUrl || 
+          `${LEVER_API_BASE}/opportunities/${opportunityId}/files/${cvFile.id}/download`;
+        
+        console.log(`[Lever] File encontrado en /files - ID: ${cvFile.id}, Name: ${cvFile.name}, URL: ${downloadUrl}`);
+        
         return {
-          id: pdfFile.id,
-          fileName: pdfFile.name || 'cv.pdf',
+          id: cvFile.id,
+          fileName: cvFile.name || 'cv.pdf',
           parsedData: null, // Files endpoint doesn't have parsed data
-          downloadUrl: pdfFile.downloadUrl || null,
+          downloadUrl: downloadUrl,
           source: 'files'
         };
       }

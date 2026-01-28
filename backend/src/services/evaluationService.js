@@ -96,16 +96,24 @@ async function getCVText(opportunityId) {
           return { text, source: 'pdf_extracted', metadata };
         } else {
           console.warn(`[CV Extract] PDF descargado pero no se pudo extraer texto`);
+          // IMPORTANTE: Aunque no se extraiga texto, guardamos la URL del archivo
+          metadata.extractionMethod = 'extraction_failed';
+          return { text: '', source: 'extraction_failed', metadata };
         }
       } catch (downloadError) {
         console.error(`[CV Extract] Error downloading/parsing PDF:`, downloadError.message);
+        // IMPORTANTE: Si hay error descargando, igual guardamos la URL si existe
+        metadata.extractionMethod = 'download_failed';
+        return { text: '', source: 'download_failed', metadata };
       }
     }
 
     console.log(`[CV Extract] No se pudo obtener contenido del CV para: ${opportunityId}`);
+    // IMPORTANTE: Devolvemos metadata aunque no haya texto extraído
     return { text: '', source: 'none', metadata };
   } catch (error) {
     console.error(`[CV Extract] Error general getting CV text:`, error.message);
+    // IMPORTANTE: En caso de error general, intentar devolver metadata si existe
     return { text: '', source: 'error', metadata: null };
   }
 }
