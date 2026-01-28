@@ -1,5 +1,5 @@
 const OpenAI = require('openai');
-const skillMatchingUtils = require('./skillMatchingUtils');
+const skillMatchingLLM = require('./skillMatchingLLM');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -14,7 +14,6 @@ const EVALUATION_PROMPT = `Eres un especialista en RRHH evaluando candidatos par
 
 **CV DEL CANDIDATO:**
 {cvText}
-{skillsMetadata}
 
 **TAREA:**
 Evalúa si el candidato aplica para esta posición.
@@ -30,9 +29,9 @@ Responde ÚNICAMENTE en JSON (sin markdown, sin explicación adicional):
 - AMARILLO: Cumple 70-90% de requisitos, falta algo menor
 - ROJO: Cumple <70% de requisitos o falta tech crítica
 
-**GUARDRAIL CRÍTICO:**
-Si una tecnología aparece en el CV (incluyendo variantes como Node.js/NodeJS/Node o NestJS/Nest.js), 
-NO digas que "no la menciona" o "no tiene experiencia". En su lugar, evalúa la PROFUNDIDAD de la experiencia.
+**IMPORTANTE:**
+Considera variantes de tecnologías (NestJS = Nest.js, Node.js = NodeJS, etc.)
+Si una tech está en el CV, evalúa la PROFUNDIDAD de experiencia, no digas que "no la menciona".
 
 El reasoning DEBE ser máximo 30 palabras. Sé conciso.`;
 
@@ -43,20 +42,12 @@ El reasoning DEBE ser máximo 30 palabras. Sé conciso.`;
  * @returns {Promise<{status: string, reasoning: string}>}
  */
 async function evaluateCV(jobDescription, cvText) {
-  // PRE-LLM: Extraer tecnologías requeridas y detectar cuáles están presentes
-  const requiredTechs = skillMatchingUtils.extractRequiredTechs(jobDescription);
-  const skillsMetadata = skillMatchingUtils.generateSkillsMetadata(cvText, requiredTechs);
-
   const prompt = EVALUATION_PROMPT
     .replace('{jobDescription}', jobDescription)
-    .replace('{cvText}', cvText || 'CV no disponible')
-    .replace('{skillsMetadata}', skillsMetadata);
+    .replace('{cvText}', cvText || 'CV no disponible');
 
   try {
-    console.log(`Evaluando con OpenAI (${OPENAI_MODEL})...`);
-    if (requiredTechs.length > 0) {
-      console.log(`Tecnologías requeridas detectadas: ${requiredTechs.join(', ')}`);
-    }
+    console.log(`[OpenAI] Evaluando con modelo ${OPENAI_MODEL}...`);
 
     const response = await openai.chat.completions.create({
       model: OPENAI_MODEL,
@@ -70,7 +61,7 @@ async function evaluateCV(jobDescription, cvText) {
     });
 
     const content = response.choices[0].message.content.trim();
-    console.log('Respuesta OpenAI:', content);
+    console.log('[OpenAI] Respuesta recibida');
 
     // Parse JSON response
     let evaluation;
@@ -91,7 +82,7 @@ async function evaluateCV(jobDescription, cvText) {
 
       evaluation = JSON.parse(cleanContent);
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', content);
+      console.error('[OpenAI] Error parseando respuesta:', content);
       return {
         status: 'AMARILLO',
         reasoning: 'Error al procesar la evaluación. Revisar manualmente.'
@@ -106,39 +97,46 @@ async function evaluateCV(jobDescription, cvText) {
       evaluation.reasoning = 'Sin razón especificada';
     }
 
-    // POST-LLM GUARDRAIL: Detectar contradicciones
-    const contradictionCheck = skillMatchingUtils.detectContradictions(
-      cvText, 
-      evaluation.reasoning, 
-      requiredTechs
-    );
-
-    if (contradictionCheck.hasContradiction) {
-      console.warn('⚠️  Contradicción detectada:', contradictionCheck.warnings);
+    // POST-LLM GUARDRAIL: Detectar contradicciones usando LLM
+    console.log('[Guardrail] Verificando contradicciones con LLM...');
+    try {
+      const requiredTechs = await skillMatchingLLM.extractRequiredTechsLLM(jobDescription);
+      console.log(`[Guardrail] Techs requeridas: ${requiredTechs.join(', ')}`);
       
-      // Ajustar reasoning para evitar falso negativo
-      // NO cambiar status (mantener decisión del LLM sobre fit general)
-      const presentTechs = requiredTechs.filter(tech => 
-        skillMatchingUtils.isTechPresent(cvText, tech)
+      const contradictionCheck = await skillMatchingLLM.detectContradictionsLLM(
+        cvText, 
+        evaluation.reasoning, 
+        requiredTechs
       );
-      
-      if (presentTechs.length > 0) {
-        // Reescribir reasoning de forma conservadora
-        evaluation.reasoning = `Tiene: ${presentTechs.slice(0, 3).join(', ')}. Evaluar profundidad de experiencia en estas tecnologías.`;
+
+      if (contradictionCheck.hasContradiction) {
+        console.warn('⚠️  [Guardrail] Contradicción detectada:', contradictionCheck.warnings);
+        
+        // Reescribir reasoning basado en techs presentes
+        // NO cambiar status (mantener decisión del LLM sobre fit general)
+        if (contradictionCheck.presentTechs && contradictionCheck.presentTechs.length > 0) {
+          const techsList = contradictionCheck.presentTechs.slice(0, 3).join(', ');
+          evaluation.reasoning = `Tiene: ${techsList}. Evaluar profundidad de experiencia en estas tecnologías.`;
+          console.log('✅ [Guardrail] Reasoning corregido');
+        }
+      } else {
+        console.log('✅ [Guardrail] Sin contradicciones');
       }
+    } catch (guardrailError) {
+      console.warn('⚠️  [Guardrail] Error en verificación, manteniendo reasoning original:', guardrailError.message);
     }
 
     // Limitar a 30 palabras
     const words = evaluation.reasoning.split(/\s+/);
     if (words.length > 30) {
-      console.log(`Reasoning excede 30 palabras (${words.length}). Truncando...`);
+      console.log(`[Guardrail] Reasoning excede 30 palabras (${words.length}). Truncando...`);
       evaluation.reasoning = words.slice(0, 30).join(' ') + '...';
     }
 
-    console.log(`Evaluación completada: ${evaluation.status}`);
+    console.log(`✅ Evaluación completada: ${evaluation.status}`);
     return evaluation;
   } catch (error) {
-    console.error('Error calling OpenAI API:', error.message);
+    console.error('❌ Error calling OpenAI API:', error.message);
     throw new Error(`OpenAI API error: ${error.message}`);
   }
 }

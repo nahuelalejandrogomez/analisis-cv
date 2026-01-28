@@ -20,27 +20,27 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
  * @returns {Promise<Array<string>>} - Lista de tecnologías en forma canónica
  */
 async function extractRequiredTechsLLM(jobDescription) {
-  const prompt = `Extrae TODAS las tecnologías mencionadas en este job description.
-Devuelve solo un array JSON de strings con las tecnologías en su forma canónica (ej: "nestjs" para NestJS/Nest.js).
+  const prompt = `Extrae TODAS las tecnologías/herramientas mencionadas. Devuelve array JSON con nombres canónicos (lowercase, sin puntos).
 
-Job Description:
-${jobDescription}
+Job:
+${jobDescription.slice(0, 2000)}
 
-Responde SOLO con JSON array, sin explicación:`;
+Ejemplo: ["nodejs", "nestjs", "postgresql", "docker", "git"]
+JSON:`;
 
   try {
     const response = await openai.chat.completions.create({
       model: OPENAI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0,
-      max_tokens: 500
+      max_tokens: 200
     });
 
     const content = response.choices[0].message.content.trim();
     const techs = JSON.parse(content);
-    return techs;
+    return Array.isArray(techs) ? techs : [];
   } catch (error) {
-    console.warn('[LLM Extract] Error extrayendo techs, fallback a array vacío:', error.message);
+    console.warn('[LLM Extract] Error:', error.message);
     return [];
   }
 }
@@ -83,23 +83,19 @@ Responde SOLO "SI" o "NO":`;
  * @returns {Promise<Object>} - {hasContradiction: bool, warnings: Array<string>, presentTechs: Array<string>}
  */
 async function detectContradictionsLLM(cvText, reasoning, requiredTechs) {
-  const prompt = `Analiza si hay contradicciones entre el CV y el reasoning del evaluador.
+  const prompt = `CV:
+${cvText.slice(0, 1500)}
 
-CV (extracto):
-${cvText.slice(0, 2000)}
+Reasoning: "${reasoning}"
+Techs requeridas: ${requiredTechs.join(', ')}
 
-Reasoning del evaluador:
-"${reasoning}"
+¿El reasoning dice que FALTA alguna tech que SÍ está en el CV (considerando variantes NestJS=Nest.js, etc)?
 
-Tecnologías requeridas: ${requiredTechs.join(', ')}
-
-TAREA: Identifica si el reasoning dice que FALTA alguna tecnología que SÍ está en el CV (considerando variantes).
-
-Responde en JSON:
+JSON:
 {
   "hasContradiction": true/false,
-  "contradictions": ["tech1 que SÍ está en CV pero reasoning dice que no", ...],
-  "presentTechs": ["tech1", "tech2", ...] (techs requeridas que SÍ están en CV)
+  "contradictions": ["tech1", ...],
+  "presentTechs": ["tech1", "tech2", ...]
 }`;
 
   try {
@@ -107,7 +103,7 @@ Responde en JSON:
       model: OPENAI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0,
-      max_tokens: 300
+      max_tokens: 250
     });
 
     const content = response.choices[0].message.content.trim();
@@ -119,7 +115,7 @@ Responde en JSON:
       presentTechs: result.presentTechs || []
     };
   } catch (error) {
-    console.warn('[LLM Contradictions] Error detectando contradicciones, fallback:', error.message);
+    console.warn('[LLM Contradictions] Error:', error.message);
     return {
       hasContradiction: false,
       warnings: [],
