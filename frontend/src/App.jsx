@@ -54,13 +54,23 @@ function App() {
     }
   }, []);
 
-  const handleJobSelect = (job) => {
-    setSelectedJob(job);
+  const handleJobSelect = async (job) => {
     setEvaluationResults([]);
     setStatusFilter(null); // Reset filter when changing job
+    
     if (job) {
-      loadCandidates(job.id);
+      // Load full job details (including descriptionPlain, requirements, responsibilities)
+      try {
+        const fullJob = await api.getJob(job.id);
+        setSelectedJob(fullJob);
+        loadCandidates(job.id);
+      } catch (err) {
+        console.error('Error loading job details:', err);
+        setSelectedJob(job); // Fallback to basic job data
+        loadCandidates(job.id);
+      }
     } else {
+      setSelectedJob(null);
       setCandidates([]);
     }
   };

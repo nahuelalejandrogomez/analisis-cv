@@ -50,8 +50,16 @@ export default function CvArtifactModal({ candidate, onClose }) {
             </div>
           ) : (
             <div className="no-data-message">
-              <p>⚠️ No hay texto de CV auditado guardado para este candidato.</p>
-              <small>El CV puede haber sido evaluado antes de que se implementara la auditoría.</small>
+              <p>⚠️ No hay texto de CV guardado para este candidato.</p>
+              <small>
+                Esto puede ocurrir si:<br/>
+                • El CV fue evaluado antes de implementar la auditoría<br/>
+                • Lever no tenía el CV disponible en el momento de la evaluación<br/>
+                • El PDF no pudo ser parseado correctamente
+              </small>
+              <div style={{ marginTop: '16px', padding: '12px', background: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
+                <strong>💡 Solución:</strong> Elimina esta evaluación y vuelve a evaluar al candidato para capturar el CV actualizado.
+              </div>
             </div>
           )}
         </div>
