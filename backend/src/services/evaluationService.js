@@ -86,12 +86,13 @@ async function getCVText(opportunityId) {
     // Strategy 2: ALWAYS try to download and extract PDF (even if parsedData exists)
     // This ensures we get the full CV content
     if (resumeData.id) {
-      console.log(`[CV Extract] Intentando descargar PDF desde: ${resumeData.source || 'resumes'}`);
+      console.log(`[CV Extract] Intentando descargar PDF - Opportunity: ${opportunityId}, Resume ID: ${resumeData.id}, Source: ${resumeData.source || 'resumes'}`);
       try {
         const pdfBuffer = await leverService.downloadResume(opportunityId, resumeData.id, resumeData.source);
-        console.log(`[CV Extract] PDF descargado: ${pdfBuffer.length} bytes`);
+        console.log(`[CV Extract] ✅ PDF descargado exitosamente: ${pdfBuffer.length} bytes`);
         metadata.fileSize = pdfBuffer.length;
         
+        console.log(`[CV Extract] Extrayendo texto del PDF con pdf-parse...`);
         const pdfText = await extractTextFromPDF(pdfBuffer);
         console.log(`[CV Extract] Texto extraído del PDF: ${pdfText.length} caracteres`);
         
@@ -112,15 +113,19 @@ async function getCVText(opportunityId) {
             finalText = `${finalText}\n\n--- CONTENIDO ADICIONAL DEL PDF ---\n\n${pdfText}`;
           }
         } else if (pdfText && pdfText.length > 0) {
-          console.warn(`[CV Extract] PDF extraído pero contenido mínimo: ${pdfText.length} caracteres`);
+          console.warn(`[CV Extract] ⚠️  PDF extraído pero contenido mínimo: ${pdfText.length} caracteres (umbral: 100)`);
+          extractionMethods.push('insufficient_content');
         } else {
-          console.warn(`[CV Extract] PDF descargado pero no se pudo extraer texto`);
+          console.warn(`[CV Extract] ⚠️  PDF descargado pero no se pudo extraer texto (posiblemente es imagen escaneada)`);
           extractionMethods.push('extraction_failed');
         }
       } catch (downloadError) {
-        console.error(`[CV Extract] Error downloading/parsing PDF:`, downloadError.message);
+        console.error(`[CV Extract] ❌ Error downloading/parsing PDF:`, downloadError.message);
+        console.error(`[CV Extract] ❌ Error stack:`, downloadError.stack);
         extractionMethods.push('download_failed');
       }
+    } else {
+      console.warn(`[CV Extract] ⚠️  No resume ID available - skipping PDF download`);
     }
 
     // Set extraction method
