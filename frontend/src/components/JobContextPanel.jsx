@@ -8,7 +8,19 @@ import React, { useState } from 'react';
 export default function JobContextPanel({ job }) {
   const [expandedSection, setExpandedSection] = useState(null);
 
-  if (!job) return null;
+  if (!job) {
+    console.log('[JobContextPanel] No job provided');
+    return null;
+  }
+
+  console.log('[JobContextPanel] Job data:', {
+    title: job.title,
+    team: job.team,
+    location: job.location,
+    hasDescriptionPlain: !!job.descriptionPlain,
+    hasRequirements: !!job.requirements,
+    hasResponsibilities: !!job.responsibilities
+  });
 
   const toggleSection = (section) => {
     setExpandedSection(expandedSection === section ? null : section);
