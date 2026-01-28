@@ -11,7 +11,9 @@
     "build": "echo 'No build required'",
     "dev": "nodemon src/server.js",
     "migrate": "node src/migrations/run.js",
-    "postinstall": "npm run migrate || true"
+    "postinstall": "npm run migrate || true",
+    "clear-db": "node scripts/clear-evaluations.js",
+    "clear-db:confirm": "node scripts/clear-evaluations.js --confirm"
   },
   "dependencies": {
     "express": "^4.18.2",
