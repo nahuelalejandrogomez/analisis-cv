@@ -4,6 +4,7 @@ const router = express.Router();
 const jobController = require('../controllers/jobController');
 const candidateController = require('../controllers/candidateController');
 const evaluationController = require('../controllers/evaluationController');
+const migrationController = require('../controllers/migrationController');
 
 // Jobs routes
 router.get('/jobs', jobController.getJobs);
@@ -26,5 +27,8 @@ router.delete('/evaluations/clear/:status', evaluationController.clearEvaluation
 router.delete('/evaluations/clear', evaluationController.clearEvaluations);
 // Ruta dinámica al final
 router.delete('/evaluations/:id', evaluationController.deleteEvaluation);
+
+// TEMPORARY: Migration endpoint (remove after use)
+router.post('/migrations/run', migrationController.runMigrations);
 
 module.exports = router;
