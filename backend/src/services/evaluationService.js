@@ -24,15 +24,21 @@ async function extractTextFromPDF(pdfBuffer) {
  */
 async function getCVText(opportunityId) {
   try {
+    console.log(`[CV Extract] Obteniendo CV para candidato: ${opportunityId}`);
+    
     // First try to get parsed data from Lever
     const resumeData = await leverService.getResumeParsedData(opportunityId);
 
     if (!resumeData) {
+      console.log(`[CV Extract] No se encontró resume data en Lever para: ${opportunityId}`);
       return { text: '', source: 'none' };
     }
 
+    console.log(`[CV Extract] Resume encontrado - ID: ${resumeData.id}, FileName: ${resumeData.fileName}`);
+
     // If Lever has parsed data, use it
     if (resumeData.parsedData) {
+      console.log(`[CV Extract] Lever tiene parsedData disponible`);
       const parsed = resumeData.parsedData;
       let text = '';
 
@@ -56,24 +62,34 @@ async function getCVText(opportunityId) {
       }
 
       if (text) {
+        console.log(`[CV Extract] Texto extraído de parsedData: ${text.length} caracteres`);
         return { text, source: 'lever_parsed' };
       }
     }
 
     // If no parsed data, download and parse PDF
     if (resumeData.id) {
+      console.log(`[CV Extract] No hay parsedData, intentando descargar PDF...`);
       try {
         const pdfBuffer = await leverService.downloadResume(opportunityId, resumeData.id);
+        console.log(`[CV Extract] PDF descargado: ${pdfBuffer.length} bytes`);
         const text = await extractTextFromPDF(pdfBuffer);
-        return { text, source: 'pdf_extracted' };
+        console.log(`[CV Extract] Texto extraído del PDF: ${text.length} caracteres`);
+        
+        if (text && text.length > 0) {
+          return { text, source: 'pdf_extracted' };
+        } else {
+          console.warn(`[CV Extract] PDF descargado pero no se pudo extraer texto`);
+        }
       } catch (downloadError) {
-        console.error('Error downloading/parsing PDF:', downloadError.message);
+        console.error(`[CV Extract] Error downloading/parsing PDF:`, downloadError.message);
       }
     }
 
+    console.log(`[CV Extract] No se pudo obtener contenido del CV para: ${opportunityId}`);
     return { text: '', source: 'none' };
   } catch (error) {
-    console.error('Error getting CV text:', error.message);
+    console.error(`[CV Extract] Error general getting CV text:`, error.message);
     return { text: '', source: 'error' };
   }
 }
@@ -114,8 +130,13 @@ ${job.responsibilities}
 
   // Get CV text
   const { text: cvText, source: cvSource } = await getCVText(candidateId);
+  
+  console.log(`[Evaluation] Candidato: ${candidateName} (${candidateId})`);
+  console.log(`[Evaluation] CV Source: ${cvSource}, Length: ${cvText?.length || 0} caracteres`);
 
   if (!cvText || cvText.trim().length < 50) {
+    console.warn(`[Evaluation] CV insuficiente para ${candidateName}. Source: ${cvSource}, Length: ${cvText?.length || 0}`);
+    
     // Save as ROJO if no CV available
     const evaluation = {
       status: 'ROJO',
