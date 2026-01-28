@@ -13,13 +13,35 @@ async function runMigrations() {
   console.log('Starting database migrations...');
 
   try {
-    // Read migration file
-    const migrationPath = path.join(__dirname, '001_create_tables.sql');
-    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+    // Run all migrations in order
+    const migrations = [
+      '001_create_tables.sql',
+      '002_add_cv_metadata.sql'
+    ];
 
-    // Run migration
-    await pool.query(migrationSQL);
-    console.log('Migration 001_create_tables.sql completed successfully');
+    for (const migrationFile of migrations) {
+      const migrationPath = path.join(__dirname, migrationFile);
+      
+      // Skip if file doesn't exist
+      if (!fs.existsSync(migrationPath)) {
+        console.log(`Skipping ${migrationFile} - file not found`);
+        continue;
+      }
+
+      const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+      
+      try {
+        await pool.query(migrationSQL);
+        console.log(`✓ Migration ${migrationFile} completed successfully`);
+      } catch (error) {
+        // If error is "column already exists", it's safe to continue
+        if (error.message.includes('already exists')) {
+          console.log(`⚠ Migration ${migrationFile} - columns already exist, skipping`);
+        } else {
+          throw error;
+        }
+      }
+    }
 
     console.log('All migrations completed!');
   } catch (error) {
