@@ -136,7 +136,23 @@ function App() {
   };
 
   const handleDeleteEvaluation = async (candidate) => {
-    if (!candidate.evaluation) return;
+    console.log('[App] handleDeleteEvaluation called with candidate:', candidate);
+    
+    if (!candidate.evaluation) {
+      console.error('[App] No evaluation found for candidate:', candidate);
+      alert('❌ No se encontró evaluación para este candidato');
+      return;
+    }
+    
+    console.log('[App] Evaluation object:', candidate.evaluation);
+    const evaluationId = candidate.evaluation.id;
+    console.log('[App] Evaluation ID:', evaluationId, 'Type:', typeof evaluationId);
+    
+    if (!evaluationId) {
+      console.error('[App] Evaluation ID is missing:', candidate.evaluation);
+      alert('❌ Error: ID de evaluación no disponible.\n\nEsta evaluación puede ser de una versión anterior. Recarga la página e intenta nuevamente.');
+      return;
+    }
     
     const confirmDelete = window.confirm(
       `¿Eliminar la evaluación de ${candidate.name}?\n\nEsto permitirá volver a evaluar al candidato con la última versión de su CV.`
@@ -145,10 +161,7 @@ function App() {
     if (!confirmDelete) return;
 
     try {
-      // Buscar el ID de la evaluación en la base de datos
-      // El candidate.evaluation debería tener un ID, pero si no, buscamos por jobId + candidateId
-      const evaluationId = candidate.evaluation.id;
-      
+      console.log('[App] Calling deleteEvaluation with ID:', evaluationId);
       await api.deleteEvaluation(evaluationId);
       
       // Recargar candidatos para reflejar el cambio

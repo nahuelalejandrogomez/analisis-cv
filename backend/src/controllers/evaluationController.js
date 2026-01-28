@@ -152,14 +152,30 @@ async function getSummary(req, res, next) {
 async function deleteEvaluation(req, res, next) {
   try {
     const { id } = req.params;
+    
+    console.log(`[Delete Evaluation] Request received for ID: "${id}" (type: ${typeof id})`);
+    
+    // Validate ID
+    if (!id || id === 'undefined' || id === 'null') {
+      console.error('[Delete Evaluation] Invalid ID received:', id);
+      return res.status(400).json({ 
+        error: 'ID de evaluación inválido',
+        receivedId: id,
+        type: typeof id
+      });
+    }
+    
     const deleted = await evaluationService.deleteEvaluation(id);
 
     if (!deleted) {
+      console.warn('[Delete Evaluation] Evaluation not found for ID:', id);
       return res.status(404).json({ error: 'Evaluation not found' });
     }
 
+    console.log(`[Delete Evaluation] ✅ Successfully deleted evaluation ID: ${id}`);
     res.json({ success: true, deleted });
   } catch (error) {
+    console.error('[Delete Evaluation] ❌ Error:', error.message);
     next(error);
   }
 }
