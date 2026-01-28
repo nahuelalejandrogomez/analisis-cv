@@ -17,6 +17,7 @@ async function getCandidates(req, res, next) {
     const evaluationMap = {};
     evaluations.forEach(e => {
       evaluationMap[e.candidate_id] = {
+        id: e.id, // ID de la evaluación para poder eliminarla
         status: e.evaluation_status,
         reasoning: e.reasoning,
         cv_text: e.cv_text, // OBJETIVO B: Include CV text for audit modal

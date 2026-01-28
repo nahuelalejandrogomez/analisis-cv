@@ -135,6 +135,33 @@ function App() {
     setStatusFilter(filter);
   };
 
+  const handleDeleteEvaluation = async (candidate) => {
+    if (!candidate.evaluation) return;
+    
+    const confirmDelete = window.confirm(
+      `¿Eliminar la evaluación de ${candidate.name}?\n\nEsto permitirá volver a evaluar al candidato con la última versión de su CV.`
+    );
+    
+    if (!confirmDelete) return;
+
+    try {
+      // Buscar el ID de la evaluación en la base de datos
+      // El candidate.evaluation debería tener un ID, pero si no, buscamos por jobId + candidateId
+      const evaluationId = candidate.evaluation.id;
+      
+      await api.deleteEvaluation(evaluationId);
+      
+      // Recargar candidatos para reflejar el cambio
+      loadCandidates(selectedJob.id);
+      
+      // Mostrar mensaje de éxito
+      alert(`✅ Evaluación de ${candidate.name} eliminada correctamente.\n\nYa puedes volver a evaluar con el CV actualizado.`);
+    } catch (err) {
+      console.error('[App] Error deleting evaluation:', err);
+      alert(`❌ Error al eliminar la evaluación: ${err.message}`);
+    }
+  };
+
   // Filter candidates based on status filter
   const filteredCandidates = statusFilter
     ? candidates.filter(candidate => {
@@ -179,6 +206,7 @@ function App() {
               evaluating={evaluating}
               onEvaluate={handleEvaluate}
               onViewCV={setCvModalCandidate}
+              onDeleteEvaluation={handleDeleteEvaluation}
             />
 
             {evaluationResults.length > 0 && (

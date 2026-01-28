@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import * as api from '../api';
 
-function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV }) {
+function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV, onDeleteEvaluation }) {
   const [selected, setSelected] = useState([]);
 
   const handleSelectAll = (e) => {
@@ -133,6 +133,7 @@ function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV 
               <th>Estado</th>
               <th>Evaluacion</th>
               <th className="th-audit">Auditoría</th>
+              <th className="th-actions">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -205,6 +206,19 @@ function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV 
                     </button>
                   ) : (
                     <span className="audit-empty">-</span>
+                  )}
+                </td>
+                <td className="td-actions">
+                  {candidate.evaluated ? (
+                    <button
+                      className="delete-btn"
+                      onClick={() => onDeleteEvaluation(candidate)}
+                      title="Eliminar evaluación"
+                    >
+                      🗑️
+                    </button>
+                  ) : (
+                    <span className="action-empty">-</span>
                   )}
                 </td>
               </tr>
