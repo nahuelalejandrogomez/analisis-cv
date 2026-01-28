@@ -39,6 +39,7 @@ export default function EvaluationDashboard({ jobId, onFilterChange, refreshTrig
     }
 
     loadSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId, refreshTrigger]); // CAMBIO: Agregado refreshTrigger
 
   function handleCardClick(status) {
