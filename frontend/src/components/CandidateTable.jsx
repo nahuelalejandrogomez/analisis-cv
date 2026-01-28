@@ -36,10 +36,15 @@ function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV,
       
       console.log('[Download CV] Metadata recibida:', metadata);
       
-      if (metadata && metadata.hasCV && metadata.downloadUrl) {
-        console.log('[Download CV] Abriendo URL:', metadata.downloadUrl);
-        // Abrir URL de descarga directamente
-        window.open(metadata.downloadUrl, '_blank');
+      if (metadata && metadata.hasCV && metadata.fileId) {
+        console.log('[Download CV] Descargando vía proxy del backend...');
+        
+        // Usar endpoint del backend que actúa como proxy autenticado
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const downloadUrl = `${API_URL}/candidates/${candidate.id}/resume/download?resumeId=${metadata.fileId}&source=${metadata.source || 'resumes'}&name=${encodeURIComponent(candidate.name)}`;
+        
+        console.log('[Download CV] URL de descarga:', downloadUrl);
+        window.open(downloadUrl, '_blank');
       } else {
         console.warn('[Download CV] No se encontró CV. Metadata:', metadata);
         alert(`No se encontró CV disponible para ${candidate.name} en Lever`);

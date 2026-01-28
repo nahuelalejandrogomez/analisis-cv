@@ -109,14 +109,14 @@ async function getCVMetadata(req, res, next) {
 async function downloadResume(req, res, next) {
   try {
     const { candidateId } = req.params;
-    const { resumeId, name } = req.query;
+    const { resumeId, name, source } = req.query;
 
     if (!resumeId) {
       return res.status(400).json({ error: 'resumeId is required' });
     }
 
-    // Download from Lever
-    const pdfBuffer = await leverService.downloadResume(candidateId, resumeId);
+    // Download from Lever (source: 'resumes' or 'files')
+    const pdfBuffer = await leverService.downloadResume(candidateId, resumeId, source || 'resumes');
 
     // Set headers for file download
     const filename = `CV_${(name || 'candidato').replace(/\s+/g, '_')}.pdf`;

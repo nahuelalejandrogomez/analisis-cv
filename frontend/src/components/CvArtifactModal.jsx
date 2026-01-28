@@ -119,17 +119,19 @@ export default function CvArtifactModal({ candidate, onClose }) {
                       {candidate.evaluation.cv_extraction_method || 'No disponible'}
                     </span>
                   </div>
-                  {cvMetadata.downloadUrl && (
+                  {cvMetadata.fileId && (
                     <div className="metadata-item" style={{ marginTop: '16px' }}>
-                      <a 
-                        href={cvMetadata.downloadUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => {
+                          const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+                          const downloadUrl = `${API_URL}/candidates/${candidate.id}/resume/download?resumeId=${cvMetadata.fileId}&source=${cvMetadata.source || 'resumes'}&name=${encodeURIComponent(candidate.name)}`;
+                          window.open(downloadUrl, '_blank');
+                        }}
                         className="btn btn-primary"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                       >
                         📥 Descargar CV desde Lever
-                      </a>
+                      </button>
                       <small style={{ display: 'block', marginTop: '8px', color: '#666' }}>
                         ✅ Siempre obtiene la versión más actualizada desde Lever API
                       </small>
