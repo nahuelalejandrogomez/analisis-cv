@@ -14,12 +14,9 @@ let jobsCache = {
  */
 const leverApi = axios.create({
   baseURL: LEVER_API_BASE,
-  auth: {
-    username: process.env.LEVER_API_KEY,
-    password: ''
-  },
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${process.env.LEVER_API_KEY}`
   }
 });
 
