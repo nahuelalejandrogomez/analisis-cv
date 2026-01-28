@@ -59,13 +59,10 @@ function App() {
     setStatusFilter(null); // Reset filter when changing job
     
     if (job) {
-      console.log('[App] Job selected:', job.id, job.title);
       // Load full job details (including descriptionPlain, requirements, responsibilities)
       try {
-        console.log('[App] Fetching full job details...');
         const response = await api.getJob(job.id);
         const fullJob = response.job; // Backend returns { job: {...} }
-        console.log('[App] Full job loaded:', fullJob);
         setSelectedJob(fullJob);
         loadCandidates(job.id);
       } catch (err) {

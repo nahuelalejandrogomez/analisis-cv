@@ -18,18 +18,10 @@ export default function EvaluationDashboard({ jobId, onFilterChange }) {
       setLoading(true);
       setError(null);
       
-      console.log('[Dashboard] Fetching summary for jobId:', jobId);
-      console.log('[Dashboard] API_URL:', API_URL);
-      
       const response = await fetch(`${API_URL}/jobs/${jobId}/evaluations/summary`);
-      
-      console.log('[Dashboard] Response status:', response.status);
-      console.log('[Dashboard] Response ok:', response.ok);
-      
       if (!response.ok) throw new Error('Error loading summary');
       
       const data = await response.json();
-      console.log('[Dashboard] Summary data:', data);
       setSummary(data);
     } catch (err) {
       console.error('Error loading evaluation summary:', err);
