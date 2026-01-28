@@ -1,0 +1,158 @@
+const evaluationService = require('../services/evaluationService');
+
+/**
+ * POST /api/evaluate
+ * Evaluate a single candidate
+ */
+async function evaluateCandidate(req, res, next) {
+  try {
+    const { jobId, candidateId, candidateName, candidateEmail } = req.body;
+
+    if (!jobId || !candidateId) {
+      return res.status(400).json({
+        error: 'jobId and candidateId are required'
+      });
+    }
+
+    const result = await evaluationService.evaluateCandidate(
+      jobId,
+      candidateId,
+      candidateName || 'Unknown',
+      candidateEmail || ''
+    );
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /api/evaluate/batch
+ * Evaluate multiple candidates
+ */
+async function evaluateBatch(req, res, next) {
+  try {
+    const { jobId, candidates } = req.body;
+
+    if (!jobId || !candidates || !Array.isArray(candidates)) {
+      return res.status(400).json({
+        error: 'jobId and candidates array are required'
+      });
+    }
+
+    const results = [];
+
+    for (const candidate of candidates) {
+      try {
+        const result = await evaluationService.evaluateCandidate(
+          jobId,
+          candidate.id,
+          candidate.name,
+          candidate.email
+        );
+        results.push(result);
+      } catch (error) {
+        results.push({
+          candidateId: candidate.id,
+          candidateName: candidate.name,
+          status: 'ROJO',
+          reasoning: `Error: ${error.message}`,
+          error: true
+        });
+      }
+
+      // Rate limiting: wait between evaluations
+      if (candidates.indexOf(candidate) < candidates.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    }
+
+    res.json({
+      results,
+      total: results.length,
+      successful: results.filter(r => !r.error).length
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/evaluations
+ * Get evaluation history
+ */
+async function getEvaluations(req, res, next) {
+  try {
+    const { jobId, status, limit = 50, offset = 0 } = req.query;
+
+    const evaluations = await evaluationService.getEvaluations({
+      jobId,
+      status,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    // Format response
+    const formatted = evaluations.map(e => ({
+      id: e.id,
+      jobId: e.job_id,
+      jobTitle: e.job_title,
+      candidateId: e.candidate_id,
+      candidateName: e.candidate_name,
+      candidateEmail: e.candidate_email,
+      status: e.evaluation_status,
+      reasoning: e.reasoning,
+      evaluatedAt: e.evaluated_at
+    }));
+
+    res.json({
+      evaluations: formatted,
+      count: formatted.length
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/evaluations/stats/:jobId
+ * Get evaluation statistics for a job
+ */
+async function getStats(req, res, next) {
+  try {
+    const { jobId } = req.params;
+    const stats = await evaluationService.getEvaluationStats(jobId);
+
+    res.json({ stats });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * DELETE /api/evaluations/:id
+ * Delete an evaluation
+ */
+async function deleteEvaluation(req, res, next) {
+  try {
+    const { id } = req.params;
+    const deleted = await evaluationService.deleteEvaluation(id);
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'Evaluation not found' });
+    }
+
+    res.json({ success: true, deleted });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = {
+  evaluateCandidate,
+  evaluateBatch,
+  getEvaluations,
+  getStats,
+  deleteEvaluation
+};

@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (for local development only)
+  # In production, use Railway's PostgreSQL addon
+  postgres:
+    image: postgres:15-alpine
+    container_name: lever-cv-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lever_evaluator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/migrations/001_create_tables.sql:/docker-entrypoint-initdb.d/001_create_tables.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
