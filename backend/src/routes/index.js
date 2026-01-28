@@ -20,6 +20,7 @@ router.post('/evaluate', evaluationController.evaluateCandidate);
 router.post('/evaluate/batch', evaluationController.evaluateBatch);
 router.get('/evaluations', evaluationController.getEvaluations);
 router.get('/evaluations/stats/:jobId', evaluationController.getStats);
+router.get('/jobs/:jobId/evaluations/summary', evaluationController.getSummary);
 // Clear routes ANTES de la ruta dinámica :id
 router.delete('/evaluations/clear/:status', evaluationController.clearEvaluationsByStatus);
 router.delete('/evaluations/clear', evaluationController.clearEvaluations);

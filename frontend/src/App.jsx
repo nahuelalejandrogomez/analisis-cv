@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import JobSelector from './components/JobSelector';
+import EvaluationDashboard from './components/EvaluationDashboard';
 import CandidateTable from './components/CandidateTable';
 import EvaluationResult from './components/EvaluationResult';
 import * as api from './api';
@@ -16,6 +17,7 @@ function App() {
   const [evaluating, setEvaluating] = useState(false);
   const [evaluationResults, setEvaluationResults] = useState([]);
   const [error, setError] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null);
 
   // Load jobs on mount
   useEffect(() => {
@@ -52,6 +54,7 @@ function App() {
   const handleJobSelect = (job) => {
     setSelectedJob(job);
     setEvaluationResults([]);
+    setStatusFilter(null); // Reset filter when changing job
     if (job) {
       loadCandidates(job.id);
     } else {
@@ -113,6 +116,20 @@ function App() {
     }
   };
 
+  const handleFilterChange = (filter) => {
+    setStatusFilter(filter);
+  };
+
+  // Filter candidates based on status filter
+  const filteredCandidates = statusFilter
+    ? candidates.filter(candidate => {
+        if (statusFilter === 'PENDING') {
+          return !candidate.evaluated;
+        }
+        return candidate.evaluated && candidate.evaluation?.status === statusFilter;
+      })
+    : candidates;
+
   return (
     <div className="app">
       <Header onRefresh={handleRefresh} />
@@ -134,8 +151,13 @@ function App() {
 
         {selectedJob && (
           <>
+            <EvaluationDashboard 
+              jobId={selectedJob.id}
+              onFilterChange={handleFilterChange}
+            />
+
             <CandidateTable
-              candidates={candidates}
+              candidates={filteredCandidates}
               loading={loadingCandidates}
               evaluating={evaluating}
               onEvaluate={handleEvaluate}

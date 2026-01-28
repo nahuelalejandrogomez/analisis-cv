@@ -131,6 +131,21 @@ async function getStats(req, res, next) {
 }
 
 /**
+ * GET /api/jobs/:jobId/evaluations/summary
+ * Get comprehensive evaluation summary (KPIs para dashboard)
+ */
+async function getSummary(req, res, next) {
+  try {
+    const { jobId } = req.params;
+    const summary = await evaluationService.getEvaluationSummary(jobId);
+
+    res.json(summary);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * DELETE /api/evaluations/:id
  * Delete an evaluation
  */
@@ -237,6 +252,7 @@ module.exports = {
   evaluateBatch,
   getEvaluations,
   getStats,
+  getSummary,
   deleteEvaluation,
   clearEvaluations,
   clearEvaluationsByStatus

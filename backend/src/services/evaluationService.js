@@ -292,6 +292,70 @@ async function getEvaluationStats(jobId) {
 }
 
 /**
+ * Get comprehensive evaluation summary for dashboard
+ * @param {string} jobId - Job posting ID
+ */
+async function getEvaluationSummary(jobId) {
+  try {
+    // 1. Get total candidates from Lever
+    const candidates = await leverService.getCandidates(jobId);
+    const totalCandidates = candidates.length;
+
+    // 2. Get evaluation stats from DB
+    const query = `
+      SELECT
+        evaluation_status as status,
+        COUNT(*) as count,
+        MAX(evaluated_at) as last_evaluated
+      FROM evaluations
+      WHERE job_id = $1
+      GROUP BY evaluation_status
+    `;
+    const result = await db.query(query, [jobId]);
+
+    // 3. Calculate stats
+    let verde = 0;
+    let amarillo = 0;
+    let rojo = 0;
+    let evaluated = 0;
+    let lastEvaluatedAt = null;
+
+    result.rows.forEach(row => {
+      const count = parseInt(row.count);
+      evaluated += count;
+
+      if (row.status === 'VERDE') verde = count;
+      else if (row.status === 'AMARILLO') amarillo = count;
+      else if (row.status === 'ROJO') rojo = count;
+
+      // Track most recent evaluation
+      if (row.last_evaluated) {
+        const rowDate = new Date(row.last_evaluated);
+        if (!lastEvaluatedAt || rowDate > new Date(lastEvaluatedAt)) {
+          lastEvaluatedAt = row.last_evaluated;
+        }
+      }
+    });
+
+    const pending = Math.max(0, totalCandidates - evaluated);
+
+    return {
+      total: totalCandidates,
+      evaluated,
+      pending,
+      verde,
+      amarillo,
+      rojo,
+      failed: 0, // No tenemos este flag en el modelo actual
+      lastEvaluatedAt
+    };
+  } catch (error) {
+    console.error('Error getting evaluation summary:', error.message);
+    throw error;
+  }
+}
+
+/**
  * Delete evaluation
  */
 async function deleteEvaluation(id) {
@@ -307,5 +371,6 @@ module.exports = {
   getEvaluationByCandidate,
   getEvaluations,
   getEvaluationStats,
+  getEvaluationSummary,
   deleteEvaluation
 };
