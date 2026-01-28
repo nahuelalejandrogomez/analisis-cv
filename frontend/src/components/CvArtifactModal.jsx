@@ -70,19 +70,26 @@ export default function CvArtifactModal({ candidate, onClose }) {
               <pre className="cv-text-content">{cvText}</pre>
               <div className="cv-stats">
                 <small>📊 {cvText.length} caracteres</small>
+                {candidate.evaluation.cv_extraction_method && (
+                  <small style={{ marginLeft: '15px' }}>
+                    🔧 Método: {candidate.evaluation.cv_extraction_method}
+                  </small>
+                )}
               </div>
             </div>
           ) : (
             <div className="no-data-message">
               <p>⚠️ No hay texto de CV guardado para este candidato.</p>
               <small>
-                Esto puede ocurrir si:<br/>
-                • El CV fue evaluado antes de implementar la auditoría<br/>
-                • Lever no tenía el CV disponible en el momento de la evaluación<br/>
-                • El PDF no pudo ser parseado correctamente
+                <strong>Método de extracción intentado:</strong> {candidate.evaluation.cv_extraction_method || 'no_extraction'}<br/><br/>
+                <strong>¿Qué significa cada método?</strong><br/>
+                • <strong>no_extraction</strong>: Lever no tenía el CV disponible<br/>
+                • <strong>download_failed</strong>: Error al descargar el PDF de Lever<br/>
+                • <strong>extraction_failed</strong>: PDF descargado pero no se pudo extraer texto (puede ser imagen escaneada)<br/>
+                • <strong>insufficient_content</strong>: CV con menos de 50 caracteres extraídos<br/>
               </small>
               <div style={{ marginTop: '16px', padding: '12px', background: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
-                <strong>💡 Solución:</strong> Elimina esta evaluación y vuelve a evaluar al candidato para capturar el CV actualizado.
+                <strong>💡 Solución:</strong> Elimina esta evaluación y vuelve a evaluar al candidato para intentar capturar el CV nuevamente.
               </div>
             </div>
           )}
