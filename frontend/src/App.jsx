@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import JobSelector from './components/JobSelector';
 import EvaluationDashboard from './components/EvaluationDashboard';
+import JobContextPanel from './components/JobContextPanel';
 import CandidateTable from './components/CandidateTable';
+import CvArtifactModal from './components/CvArtifactModal';
 import EvaluationResult from './components/EvaluationResult';
 import * as api from './api';
 import './styles/components.css';
@@ -18,6 +20,7 @@ function App() {
   const [evaluationResults, setEvaluationResults] = useState([]);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState(null);
+  const [cvModalCandidate, setCvModalCandidate] = useState(null);
 
   // Load jobs on mount
   useEffect(() => {
@@ -86,6 +89,7 @@ function App() {
                     evaluation: {
                       status: result.status,
                       reasoning: result.reasoning,
+                      cv_text: result.cv_text || result.cvText, // OBJETIVO B: Guardar CV para auditoría
                       evaluatedAt: new Date().toISOString()
                     }
                   }
@@ -156,11 +160,14 @@ function App() {
               onFilterChange={handleFilterChange}
             />
 
+            <JobContextPanel job={selectedJob} />
+
             <CandidateTable
               candidates={filteredCandidates}
               loading={loadingCandidates}
               evaluating={evaluating}
               onEvaluate={handleEvaluate}
+              onViewCV={setCvModalCandidate}
             />
 
             {evaluationResults.length > 0 && (
@@ -180,6 +187,14 @@ function App() {
       <footer className="footer">
         <p>CV Evaluator by Redbee - Powered by Claude AI</p>
       </footer>
+
+      {/* CV Artifact Modal (OBJETIVO B) */}
+      {cvModalCandidate && (
+        <CvArtifactModal 
+          candidate={cvModalCandidate}
+          onClose={() => setCvModalCandidate(null)}
+        />
+      )}
     </div>
   );
 }

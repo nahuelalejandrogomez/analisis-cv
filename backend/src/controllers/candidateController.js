@@ -19,6 +19,8 @@ async function getCandidates(req, res, next) {
       evaluationMap[e.candidate_id] = {
         status: e.evaluation_status,
         reasoning: e.reasoning,
+        cv_text: e.cv_text, // OBJETIVO B: Include CV text for audit modal
+        cvText: e.cv_text,  // Alias for compatibility
         evaluatedAt: e.evaluated_at
       };
     });

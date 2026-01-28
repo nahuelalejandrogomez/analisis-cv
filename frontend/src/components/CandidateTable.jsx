@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { getResumeDownloadUrl } from '../api';
 
-function CandidateTable({ candidates, loading, evaluating, onEvaluate }) {
+function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV }) {
   const [selected, setSelected] = useState([]);
 
   const handleSelectAll = (e) => {
@@ -115,6 +115,7 @@ function CandidateTable({ candidates, loading, evaluating, onEvaluate }) {
               <th>CV</th>
               <th>Estado</th>
               <th>Evaluacion</th>
+              <th className="th-audit">Auditoría</th>
             </tr>
           </thead>
           <tbody>
@@ -175,6 +176,19 @@ function CandidateTable({ candidates, loading, evaluating, onEvaluate }) {
                 </td>
                 <td className="td-reasoning">
                   {candidate.evaluation?.reasoning || '-'}
+                </td>
+                <td className="td-audit">
+                  {candidate.evaluated ? (
+                    <button
+                      className="audit-btn"
+                      onClick={() => onViewCV(candidate)}
+                      title="Ver CV evaluado (auditoría)"
+                    >
+                      👁️
+                    </button>
+                  ) : (
+                    <span className="audit-empty">-</span>
+                  )}
                 </td>
               </tr>
             ))}
