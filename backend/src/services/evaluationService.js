@@ -353,13 +353,22 @@ async function getEvaluationStats(jobId) {
  * Get comprehensive evaluation summary for dashboard
  * @param {string} jobId - Job posting ID
  */
+/**
+ * Simple cache for candidate counts (evita llamadas repetidas a Lever API)
+ * TTL: 5 minutos
+ */
+const candidateCountCache = {
+  data: {},
+  TTL: 5 * 60 * 1000 // 5 minutos
+};
+
+/**
+ * Get evaluation summary with optimized performance
+ * @param {string} jobId - Job posting ID
+ */
 async function getEvaluationSummary(jobId) {
   try {
-    // 1. Get total candidates from Lever
-    const candidates = await leverService.getCandidates(jobId);
-    const totalCandidates = candidates.length;
-
-    // 2. Get evaluation stats from DB
+    // 1. Get evaluation stats from DB (RÁPIDO)
     const query = `
       SELECT
         evaluation_status as status,
@@ -371,7 +380,7 @@ async function getEvaluationSummary(jobId) {
     `;
     const result = await db.query(query, [jobId]);
 
-    // 3. Calculate stats
+    // 2. Calculate stats from DB
     let verde = 0;
     let amarillo = 0;
     let rojo = 0;
@@ -394,6 +403,34 @@ async function getEvaluationSummary(jobId) {
         }
       }
     });
+
+    // 3. Get total candidates (con cache para evitar llamadas lentas a Lever)
+    let totalCandidates = evaluated; // Fallback mínimo
+    
+    const cacheEntry = candidateCountCache.data[jobId];
+    const now = Date.now();
+    
+    if (cacheEntry && (now - cacheEntry.timestamp < candidateCountCache.TTL)) {
+      // Cache hit
+      console.log(`[Summary] Using cached candidate count for job ${jobId}`);
+      totalCandidates = cacheEntry.count;
+    } else {
+      // Cache miss - fetch from Lever (esto es lo lento)
+      console.log(`[Summary] Cache miss, fetching candidates from Lever for job ${jobId}`);
+      try {
+        const candidates = await leverService.getCandidates(jobId);
+        totalCandidates = candidates.length;
+        
+        // Update cache
+        candidateCountCache.data[jobId] = {
+          count: totalCandidates,
+          timestamp: now
+        };
+      } catch (leverError) {
+        console.warn(`[Summary] Error fetching from Lever, using evaluated count as fallback:`, leverError.message);
+        totalCandidates = evaluated; // Fallback si Lever falla
+      }
+    }
 
     const pending = Math.max(0, totalCandidates - evaluated);
 

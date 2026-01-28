@@ -21,6 +21,7 @@ function App() {
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState(null);
   const [cvModalCandidate, setCvModalCandidate] = useState(null);
+  const [summaryRefreshTrigger, setSummaryRefreshTrigger] = useState(0); // NUEVO: trigger para refresh
 
   // Load jobs on mount
   useEffect(() => {
@@ -121,6 +122,8 @@ function App() {
       }
     } finally {
       setEvaluating(false);
+      // NUEVO: Refresh summary después de evaluar
+      setSummaryRefreshTrigger(prev => prev + 1);
     }
   };
 
@@ -167,6 +170,9 @@ function App() {
       // Recargar candidatos para reflejar el cambio
       loadCandidates(selectedJob.id);
       
+      // NUEVO: Refresh summary después de eliminar
+      setSummaryRefreshTrigger(prev => prev + 1);
+      
       // Mostrar mensaje de éxito
       alert(`✅ Evaluación de ${candidate.name} eliminada correctamente.\n\nYa puedes volver a evaluar con el CV actualizado.`);
     } catch (err) {
@@ -209,6 +215,7 @@ function App() {
             <EvaluationDashboard 
               jobId={selectedJob.id}
               onFilterChange={handleFilterChange}
+              refreshTrigger={summaryRefreshTrigger}
             />
 
             <JobContextPanel job={selectedJob} />

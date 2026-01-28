@@ -35,16 +35,6 @@ function JobSelector({ jobs, selectedJob, onSelectJob, loading }) {
           ))}
         </select>
       )}
-
-      {selectedJob && (
-        <div className="selected-job-info">
-          <h3>{selectedJob.title}</h3>
-          <div className="job-details">
-            <span className="badge">{selectedJob.team}</span>
-            <span className="badge badge-secondary">{selectedJob.location}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

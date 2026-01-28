@@ -7,7 +7,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
  * Dashboard with KPI cards for evaluation summary
  * Cards are clickable to filter candidates by status
  */
-export default function EvaluationDashboard({ jobId, onFilterChange }) {
+export default function EvaluationDashboard({ jobId, onFilterChange, refreshTrigger }) {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,7 +39,7 @@ export default function EvaluationDashboard({ jobId, onFilterChange }) {
     }
 
     loadSummary();
-  }, [jobId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [jobId, refreshTrigger]); // CAMBIO: Agregado refreshTrigger
 
   function handleCardClick(status) {
     // Toggle filter: if already active, reset; otherwise set new filter
