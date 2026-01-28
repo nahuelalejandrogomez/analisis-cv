@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Header({ onRefresh }) {
+function Header({ onEvaluate, selectedCount, evaluating }) {
   return (
     <header className="header">
       <div className="header-content">
@@ -17,8 +17,19 @@ function Header({ onRefresh }) {
         </div>
 
         <div className="header-actions">
-          <button className="btn btn-secondary" onClick={onRefresh}>
-            Actualizar Datos
+          <button 
+            className="btn btn-primary" 
+            onClick={onEvaluate}
+            disabled={!selectedCount || selectedCount === 0 || evaluating}
+          >
+            {evaluating ? (
+              <>
+                <span className="spinner-small"></span>
+                Evaluando...
+              </>
+            ) : (
+              `Evaluar Seleccionados (${selectedCount || 0})`
+            )}
           </button>
         </div>
       </div>

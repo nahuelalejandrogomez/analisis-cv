@@ -1,30 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as api from '../api';
 
-function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV, onDeleteEvaluation }) {
+function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEvaluation, selectedCandidates, onSelectionChange }) {
   const [selected, setSelected] = useState([]);
+
+  // Sincronizar selección interna con prop externa
+  useEffect(() => {
+    setSelected(selectedCandidates.map(c => c.id));
+  }, [selectedCandidates]);
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       // Select only candidates not yet evaluated
-      setSelected(candidates.filter(c => !c.evaluated).map(c => c.id));
+      const newSelected = candidates.filter(c => !c.evaluated);
+      setSelected(newSelected.map(c => c.id));
+      onSelectionChange(newSelected);
     } else {
       setSelected([]);
+      onSelectionChange([]);
     }
   };
 
   const handleSelect = (candidateId) => {
-    setSelected(prev =>
-      prev.includes(candidateId)
-        ? prev.filter(id => id !== candidateId)
-        : [...prev, candidateId]
-    );
-  };
-
-  const handleEvaluate = () => {
-    const selectedCandidates = candidates.filter(c => selected.includes(c.id));
-    onEvaluate(selectedCandidates);
-    setSelected([]);
+    const newSelected = selected.includes(candidateId)
+      ? selected.filter(id => id !== candidateId)
+      : [...selected, candidateId];
+    
+    setSelected(newSelected);
+    
+    // Convertir IDs a objetos candidatos
+    const selectedCandidatesObjects = candidates.filter(c => newSelected.includes(c.id));
+    onSelectionChange(selectedCandidatesObjects);
   };
 
   const handleDownloadCV = async (candidate) => {
@@ -61,11 +67,12 @@ function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV,
     const statusClasses = {
       VERDE: 'status-verde',
       AMARILLO: 'status-amarillo',
-      ROJO: 'status-rojo'
+      ROJO: 'status-rojo',
+      ERROR: 'status-error'
     };
 
     return (
-      <span className={`status-badge ${statusClasses[evaluation.status]}`}>
+      <span className={`status-badge ${statusClasses[evaluation.status] || 'status-error'}`}>
         {evaluation.status}
       </span>
     );
@@ -102,20 +109,11 @@ function CandidateTable({ candidates, loading, evaluating, onEvaluate, onViewCV,
               {unevaluatedCount} sin evaluar
             </span>
           )}
-          <button
-            className="btn btn-primary"
-            onClick={handleEvaluate}
-            disabled={selectedCount === 0 || evaluating}
-          >
-            {evaluating ? (
-              <>
-                <span className="spinner-small"></span>
-                Evaluando...
-              </>
-            ) : (
-              `Evaluar Seleccionados (${selectedCount})`
-            )}
-          </button>
+          {selectedCount > 0 && (
+            <span className="selected-count">
+              {selectedCount} seleccionados
+            </span>
+          )}
         </div>
       </div>
 

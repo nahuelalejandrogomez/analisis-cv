@@ -22,6 +22,7 @@ function App() {
   const [statusFilter, setStatusFilter] = useState(null);
   const [cvModalCandidate, setCvModalCandidate] = useState(null);
   const [summaryRefreshTrigger, setSummaryRefreshTrigger] = useState(0); // NUEVO: trigger para refresh
+  const [selectedCandidates, setSelectedCandidates] = useState([]); // NUEVO: estado para candidatos seleccionados
 
   // Load jobs on mount
   useEffect(() => {
@@ -77,7 +78,12 @@ function App() {
     }
   };
 
-  const handleEvaluate = async (selectedCandidates) => {
+  // Reset selection when job changes
+  useEffect(() => {
+    setSelectedCandidates([]);
+  }, [selectedJob?.id]);
+
+  const handleEvaluate = async () => {
     if (!selectedJob || selectedCandidates.length === 0) return;
 
     setEvaluating(true);
@@ -122,15 +128,9 @@ function App() {
       }
     } finally {
       setEvaluating(false);
+      setSelectedCandidates([]); // Limpiar selección después de evaluar
       // NUEVO: Refresh summary después de evaluar
       setSummaryRefreshTrigger(prev => prev + 1);
-    }
-  };
-
-  const handleRefresh = () => {
-    loadJobs(true);
-    if (selectedJob) {
-      loadCandidates(selectedJob.id);
     }
   };
 
@@ -193,7 +193,11 @@ function App() {
 
   return (
     <div className="app">
-      <Header onRefresh={handleRefresh} />
+      <Header 
+        onEvaluate={handleEvaluate}
+        selectedCount={selectedCandidates.length}
+        evaluating={evaluating}
+      />
 
       <main className="main-content">
         {error && (
@@ -224,9 +228,10 @@ function App() {
               candidates={filteredCandidates}
               loading={loadingCandidates}
               evaluating={evaluating}
-              onEvaluate={handleEvaluate}
               onViewCV={setCvModalCandidate}
               onDeleteEvaluation={handleDeleteEvaluation}
+              selectedCandidates={selectedCandidates}
+              onSelectionChange={setSelectedCandidates}
             />
 
             {evaluationResults.length > 0 && (

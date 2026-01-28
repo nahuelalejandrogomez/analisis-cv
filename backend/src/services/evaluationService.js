@@ -179,12 +179,14 @@ ${job.additionalText || ''}
   console.log(`[Evaluation] Candidato: ${candidateName} (${candidateId})`);
   console.log(`[Evaluation] CV Source: ${cvSource}, Length: ${cvText?.length || 0} caracteres`);
 
-  if (!cvText || cvText.trim().length < 50) {
-    console.warn(`[Evaluation] CV insuficiente para ${candidateName}. Source: ${cvSource}, Length: ${cvText?.length || 0}`);
+  // VALIDACIÓN CRÍTICA: Rechazar evaluación si no hay CV con contenido suficiente
+  // Aumentamos el umbral a 100 caracteres para asegurar que haya contenido real
+  if (!cvText || cvText.trim().length < 100) {
+    console.error(`[Evaluation] ❌ CV INSUFICIENTE para ${candidateName}. Source: ${cvSource}, Length: ${cvText?.length || 0}`);
     
-    // Save as ROJO if no CV available
+    // Save as ERROR - NO permitir que el LLM evalúe sin CV
     const evaluation = {
-      status: 'ROJO',
+      status: 'ERROR',
       reasoning: 'CV no disponible o contenido insuficiente para evaluar'
     };
 
@@ -207,6 +209,8 @@ ${job.additionalText || ''}
       savedToDb: true
     };
   }
+
+  console.log(`[Evaluation] ✅ CV válido, procediendo con evaluación LLM`);
 
   // Evaluate with OpenAI
   const evaluation = await openaiService.evaluateCV(jobDescription, cvText);
@@ -384,6 +388,7 @@ async function getEvaluationSummary(jobId) {
     let verde = 0;
     let amarillo = 0;
     let rojo = 0;
+    let error = 0;
     let evaluated = 0;
     let lastEvaluatedAt = null;
 
@@ -394,6 +399,7 @@ async function getEvaluationSummary(jobId) {
       if (row.status === 'VERDE') verde = count;
       else if (row.status === 'AMARILLO') amarillo = count;
       else if (row.status === 'ROJO') rojo = count;
+      else if (row.status === 'ERROR') error = count;
 
       // Track most recent evaluation
       if (row.last_evaluated) {
@@ -441,6 +447,7 @@ async function getEvaluationSummary(jobId) {
       verde,
       amarillo,
       rojo,
+      error,
       failed: 0, // No tenemos este flag en el modelo actual
       lastEvaluatedAt
     };

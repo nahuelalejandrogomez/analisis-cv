@@ -373,6 +373,12 @@ body {
   color: var(--rojo);
 }
 
+.status-error {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #ccc;
+}
+
 /* Form Elements - Redbee style */
 select,
 input[type="text"],
