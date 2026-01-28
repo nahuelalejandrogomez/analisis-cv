@@ -149,10 +149,95 @@ async function deleteEvaluation(req, res, next) {
   }
 }
 
+/**
+ * DELETE /api/evaluations/clear
+ * Clear ALL evaluations (útil para testing)
+ * Requiere query param ?confirm=true para seguridad
+ */
+async function clearEvaluations(req, res, next) {
+  try {
+    const { confirm } = req.query;
+
+    if (confirm !== 'true') {
+      return res.status(400).json({
+        error: 'Para borrar todas las evaluaciones, debes incluir ?confirm=true',
+        example: 'DELETE /api/evaluations/clear?confirm=true'
+      });
+    }
+
+    // Obtener stats antes de borrar
+    const db = require('../config/database');
+    const statsResult = await db.query(`
+      SELECT 
+        evaluation_status,
+        COUNT(*) as count
+      FROM evaluations
+      GROUP BY evaluation_status
+    `);
+
+    const beforeStats = {};
+    statsResult.rows.forEach(row => {
+      beforeStats[row.evaluation_status] = parseInt(row.count);
+    });
+
+    // Borrar todas
+    const result = await db.query('DELETE FROM evaluations RETURNING *');
+    const deletedCount = result.rowCount;
+
+    res.json({
+      success: true,
+      message: `${deletedCount} evaluaciones borradas exitosamente`,
+      deletedCount,
+      beforeStats,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * DELETE /api/evaluations/clear/:status
+ * Clear evaluations by status (VERDE, AMARILLO, ROJO)
+ */
+async function clearEvaluationsByStatus(req, res, next) {
+  try {
+    const { status } = req.params;
+    const validStatuses = ['VERDE', 'AMARILLO', 'ROJO'];
+
+    if (!validStatuses.includes(status.toUpperCase())) {
+      return res.status(400).json({
+        error: 'Status inválido',
+        validStatuses
+      });
+    }
+
+    const db = require('../config/database');
+    const result = await db.query(
+      'DELETE FROM evaluations WHERE evaluation_status = $1 RETURNING *',
+      [status.toUpperCase()]
+    );
+
+    const deletedCount = result.rowCount;
+
+    res.json({
+      success: true,
+      message: `${deletedCount} evaluaciones con status ${status.toUpperCase()} borradas`,
+      deletedCount,
+      status: status.toUpperCase(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   evaluateCandidate,
   evaluateBatch,
   getEvaluations,
   getStats,
-  deleteEvaluation
+  deleteEvaluation,
+  clearEvaluations,
+  clearEvaluationsByStatus
 };
