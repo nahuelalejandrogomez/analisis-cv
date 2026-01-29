@@ -1,37 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import * as api from '../api';
+import React from 'react';
 
 /**
- * OBJETIVO B: Vista de auditoría del CV evaluado (solo lectura)
+ * Vista de auditoría del CV evaluado (solo lectura)
  * Muestra el texto EXACTO que fue enviado al LLM
  * NO procesa, NO limpia, NO modifica el texto
- * 
- * CV Metadata: Siempre se obtiene desde Lever API en tiempo real (no de BD)
- * para asegurar que tengamos la versión más actualizada del CV
  */
 export default function CvArtifactModal({ candidate, onClose }) {
-  const [cvMetadata, setCvMetadata] = useState(null);
-  const [loadingMetadata, setLoadingMetadata] = useState(true);
-
-  useEffect(() => {
-    if (candidate?.id) {
-      console.log('[CV Metadata Modal] Obteniendo metadata para:', candidate.name, candidate.id);
-      setLoadingMetadata(true);
-      
-      // Obtener metadata del CV desde Lever API (siempre fresco)
-      api.getCVMetadata(candidate.id)
-        .then(data => {
-          console.log('[CV Metadata Modal] Metadata recibida:', data);
-          setCvMetadata(data);
-          setLoadingMetadata(false);
-        })
-        .catch(err => {
-          console.error('[CV Metadata Modal] Error obteniendo CV metadata:', err);
-          setLoadingMetadata(false);
-        });
-    }
-  }, [candidate?.id, candidate?.name]);
-
   if (!candidate || !candidate.evaluation) return null;
 
   const cvText = candidate.evaluation.cv_text || candidate.evaluation.cvText;
@@ -55,7 +29,7 @@ export default function CvArtifactModal({ candidate, onClose }) {
             <strong>Email:</strong> {candidate.email || 'N/A'}
           </div>
           <div className="info-row">
-            <strong>Estado:</strong> 
+            <strong>Estado:</strong>
             <span className={`status-badge status-${candidate.evaluation.status?.toLowerCase()}`}>
               {candidate.evaluation.status}
             </span>
@@ -93,68 +67,6 @@ export default function CvArtifactModal({ candidate, onClose }) {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Metadata del CV desde Lever (siempre actualizado) */}
-        <div className="artifact-metadata">
-          <details open>
-            <summary>📄 Archivo CV en Lever (actualizado en tiempo real)</summary>
-            <div className="metadata-content">
-              {loadingMetadata ? (
-                <div style={{ padding: '12px', textAlign: 'center' }}>
-                  <em>Obteniendo información del CV desde Lever...</em>
-                </div>
-              ) : cvMetadata?.hasCV ? (
-                <>
-                  <div className="metadata-item">
-                    <strong>Nombre del archivo:</strong> 
-                    <span>{cvMetadata.fileName}</span>
-                  </div>
-                  <div className="metadata-item">
-                    <strong>Fuente:</strong> 
-                    <span className="code">{cvMetadata.source}</span>
-                    <small style={{ marginLeft: '8px', color: '#666' }}>
-                      ({cvMetadata.source === 'resumes' ? 'Endpoint /resumes' : 'Endpoint /files'})
-                    </small>
-                  </div>
-                  <div className="metadata-item">
-                    <strong>Caracteres extraídos:</strong> {cvText?.length || 0}
-                  </div>
-                  <div className="metadata-item">
-                    <strong>Método de extracción:</strong> 
-                    <span className="code">
-                      {candidate.evaluation.cv_extraction_method || 'No disponible'}
-                    </span>
-                  </div>
-                  {cvMetadata.fileId && (
-                    <div className="metadata-item" style={{ marginTop: '16px' }}>
-                      <button
-                        onClick={() => {
-                          const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-                          const downloadUrl = `${API_URL}/candidates/${candidate.id}/resume/download?resumeId=${cvMetadata.fileId}&source=${cvMetadata.source || 'resumes'}&name=${encodeURIComponent(candidate.name)}`;
-                          window.open(downloadUrl, '_blank');
-                        }}
-                        className="btn btn-primary"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-                      >
-                        📥 Descargar CV desde Lever
-                      </button>
-                      <small style={{ display: 'block', marginTop: '8px', color: '#666' }}>
-                        ✅ Siempre obtiene la versión más actualizada desde Lever API
-                      </small>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ padding: '12px' }}>
-                  <p>⚠️ No se encontró archivo CV en Lever para este candidato.</p>
-                  <small style={{ color: '#666' }}>
-                    El candidato puede no haber subido un CV o fue eliminado de Lever.
-                  </small>
-                </div>
-              )}
-            </div>
-          </details>
         </div>
 
         {/* Footer */}
