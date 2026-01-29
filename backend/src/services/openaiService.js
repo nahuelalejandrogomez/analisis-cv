@@ -42,12 +42,15 @@ El reasoning DEBE ser máximo 30 palabras. Sé conciso.`;
  * @returns {Promise<{status: string, reasoning: string}>}
  */
 async function evaluateCV(jobDescription, cvText) {
-  // VALIDACIÓN CRÍTICA: No evaluar si no hay CV con contenido suficiente
-  if (!cvText || cvText.trim().length < 100) {
-    console.error('[OpenAI] ❌ RECHAZADO: CV insuficiente o vacío. No se enviará al LLM.');
+  // GUARDRAIL SECUNDARIO: Defensa en profundidad
+  // El guardrail principal está en evaluationService.js
+  // Este es un fallback por si algo bypasea el primero
+  const charCount = cvText?.trim()?.length || 0;
+  if (!cvText || charCount < 50) {
+    console.error(`[OpenAI] ❌ GUARDRAIL SECUNDARIO: CV insuficiente (${charCount} chars). No se enviará al LLM.`);
     return {
-      status: 'ERROR',
-      reasoning: 'CV no disponible o contenido insuficiente para evaluar'
+      status: 'AMARILLO',
+      reasoning: 'CV no disponible o ilegible. Reintentar extracción y reevaluar. Revisión manual recomendada.'
     };
   }
 

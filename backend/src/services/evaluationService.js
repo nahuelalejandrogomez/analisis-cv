@@ -3,6 +3,70 @@ const leverService = require('./leverService');
 const openaiService = require('./openaiService');
 const pdfParse = require('pdf-parse');
 
+// ============================================================================
+// GUARDRAIL: Determina si se debe llamar al LLM para evaluar
+// ============================================================================
+const INVALID_EXTRACTION_METHODS = [
+  'no_extraction',
+  'download_failed',
+  'extraction_failed',
+  'insufficient_content',
+  'none',
+  'error'
+];
+
+const MIN_CV_CHARS = 50; // Umbral mínimo para considerar CV "útil"
+
+const NO_CV_RESPONSE = {
+  status: 'AMARILLO',
+  reasoning: 'CV no disponible o ilegible. Reintentar extracción y reevaluar. Revisión manual recomendada.'
+};
+
+/**
+ * GUARDRAIL: Determina si hay suficiente contenido de CV para llamar al LLM
+ * @param {Object} params - { cvText, extractionMethod, metadata }
+ * @returns {Object} - { shouldCall: boolean, reason: string }
+ */
+function shouldCallLLM({ cvText, extractionMethod, metadata }) {
+  const charCount = cvText?.trim()?.length || 0;
+  const method = extractionMethod?.toLowerCase() || 'no_extraction';
+
+  // Verificar si el método de extracción indica fallo
+  const hasInvalidMethod = INVALID_EXTRACTION_METHODS.some(invalid =>
+    method.includes(invalid)
+  );
+
+  // Si el método indica fallo explícito, NO llamar al LLM
+  if (hasInvalidMethod && charCount < MIN_CV_CHARS) {
+    return {
+      shouldCall: false,
+      reason: `Extraction method indicates failure: ${method}, chars: ${charCount}`
+    };
+  }
+
+  // Verificar contenido mínimo
+  if (!cvText || charCount < MIN_CV_CHARS) {
+    return {
+      shouldCall: false,
+      reason: `Insufficient CV content: ${charCount} chars (min: ${MIN_CV_CHARS})`
+    };
+  }
+
+  // Verificar que no sea solo whitespace/newlines
+  const meaningfulContent = cvText.replace(/[\s\n\r\t]+/g, ' ').trim();
+  if (meaningfulContent.length < MIN_CV_CHARS) {
+    return {
+      shouldCall: false,
+      reason: `CV content is mostly whitespace: ${meaningfulContent.length} meaningful chars`
+    };
+  }
+
+  return {
+    shouldCall: true,
+    reason: `Valid CV: ${charCount} chars, method: ${method}`
+  };
+}
+
 /**
  * Extract text from PDF buffer
  * @param {Buffer} pdfBuffer - PDF file buffer
@@ -180,20 +244,27 @@ ${job.additionalText || ''}
 
   // Get CV text
   const { text: cvText, source: cvSource, metadata: cvMetadata } = await getCVText(candidateId);
-  
+
   console.log(`[Evaluation] Candidato: ${candidateName} (${candidateId})`);
   console.log(`[Evaluation] CV Source: ${cvSource}, Length: ${cvText?.length || 0} caracteres`);
+  console.log(`[Evaluation] Extraction Method: ${cvMetadata?.extractionMethod || 'unknown'}`);
 
-  // VALIDACIÓN CRÍTICA: Rechazar evaluación si no hay CV con contenido suficiente
-  // Aumentamos el umbral a 100 caracteres para asegurar que haya contenido real
-  if (!cvText || cvText.trim().length < 100) {
-    console.error(`[Evaluation] ❌ CV INSUFICIENTE para ${candidateName}. Source: ${cvSource}, Length: ${cvText?.length || 0}`);
-    
-    // Save as ERROR - NO permitir que el LLM evalúe sin CV
-    const evaluation = {
-      status: 'ERROR',
-      reasoning: 'CV no disponible o contenido insuficiente para evaluar'
-    };
+  // =========================================================================
+  // GUARDRAIL: Verificar si hay CV suficiente antes de llamar al LLM
+  // =========================================================================
+  const llmCheck = shouldCallLLM({
+    cvText,
+    extractionMethod: cvMetadata?.extractionMethod || cvSource,
+    metadata: cvMetadata
+  });
+
+  if (!llmCheck.shouldCall) {
+    console.error(`[Evaluation] ❌ GUARDRAIL ACTIVADO para ${candidateName}`);
+    console.error(`[Evaluation] ❌ Razón: ${llmCheck.reason}`);
+    console.error(`[Evaluation] ❌ CV Source: ${cvSource}, Method: ${cvMetadata?.extractionMethod}, Chars: ${cvText?.length || 0}`);
+
+    // Devolver AMARILLO con reasoning fijo - NO llamar al LLM
+    const evaluation = { ...NO_CV_RESPONSE };
 
     await saveEvaluation({
       jobId,
@@ -211,11 +282,14 @@ ${job.additionalText || ''}
       candidateName,
       ...evaluation,
       cvSource,
+      guardrailActivated: true,
+      guardrailReason: llmCheck.reason,
       savedToDb: true
     };
   }
 
-  console.log(`[Evaluation] ✅ CV válido, procediendo con evaluación LLM`);
+  console.log(`[Evaluation] ✅ GUARDRAIL PASADO: ${llmCheck.reason}`);
+  console.log(`[Evaluation] ✅ Procediendo con evaluación LLM`);
 
   // Evaluate with OpenAI
   const evaluation = await openaiService.evaluateCV(jobDescription, cvText);

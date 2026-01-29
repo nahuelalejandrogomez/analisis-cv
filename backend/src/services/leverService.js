@@ -199,16 +199,54 @@ async function getJob(jobId) {
  * @param {string} source - 'resumes' or 'files' endpoint
  */
 async function downloadResume(opportunityId, resumeId, source = 'resumes') {
+  const endpoint = source === 'files'
+    ? `/opportunities/${opportunityId}/files/${resumeId}/download`
+    : `/opportunities/${opportunityId}/resumes/${resumeId}/download`;
+
+  console.log(`[Lever Download] Iniciando descarga - Endpoint: ${endpoint}`);
+  console.log(`[Lever Download] OpportunityId: ${opportunityId}, ResumeId: ${resumeId}, Source: ${source}`);
+
   try {
-    const endpoint = source === 'files' 
-      ? `/opportunities/${opportunityId}/files/${resumeId}/download`
-      : `/opportunities/${opportunityId}/resumes/${resumeId}/download`;
-    
-    const response = await leverApi.get(endpoint, { responseType: 'arraybuffer' });
+    const response = await leverApi.get(endpoint, {
+      responseType: 'arraybuffer',
+      maxRedirects: 5, // Seguir redirects (Lever a veces redirige a S3)
+      timeout: 30000   // 30 segundos timeout
+    });
+
+    const contentType = response.headers['content-type'];
+    const contentLength = response.headers['content-length'];
+
+    console.log(`[Lever Download] ✅ Respuesta recibida - Status: ${response.status}`);
+    console.log(`[Lever Download] Content-Type: ${contentType}, Content-Length: ${contentLength}`);
+    console.log(`[Lever Download] Buffer size: ${response.data?.length || 0} bytes`);
+
+    // Verificar que recibimos datos
+    if (!response.data || response.data.length === 0) {
+      console.error(`[Lever Download] ❌ Respuesta vacía del servidor`);
+      throw new Error('Empty response from Lever API');
+    }
+
+    // Verificar que es un PDF (empieza con %PDF-)
+    const header = Buffer.from(response.data.slice(0, 5)).toString('utf8');
+    if (header !== '%PDF-') {
+      console.warn(`[Lever Download] ⚠️ Archivo no parece ser PDF. Header: "${header}"`);
+      // Podría ser otro formato, continuamos igual
+    }
+
     return response.data;
   } catch (error) {
-    console.error('Error downloading resume:', error.response?.data || error.message);
-    throw new Error(`Failed to download resume: ${error.message}`);
+    const status = error.response?.status;
+    const statusText = error.response?.statusText;
+    const errorData = error.response?.data
+      ? Buffer.from(error.response.data).toString('utf8').substring(0, 200)
+      : error.message;
+
+    console.error(`[Lever Download] ❌ Error descargando resume`);
+    console.error(`[Lever Download] ❌ HTTP Status: ${status} ${statusText}`);
+    console.error(`[Lever Download] ❌ Error: ${errorData}`);
+    console.error(`[Lever Download] ❌ Endpoint: ${endpoint}`);
+
+    throw new Error(`Failed to download resume: ${status || ''} ${statusText || error.message}`);
   }
 }
 
