@@ -1,266 +1,138 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import Header from './components/Header';
-import JobSelector from './components/JobSelector';
-import EvaluationDashboard from './components/EvaluationDashboard';
-import JobContextPanel from './components/JobContextPanel';
-import CandidateTable from './components/CandidateTable';
-import CvArtifactModal from './components/CvArtifactModal';
-import EvaluationResult from './components/EvaluationResult';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import LoginCallback from './pages/LoginCallback';
+import Dashboard from './pages/Dashboard';
 import * as api from './api';
-import './styles/components.css';
-import './styles/responsive.css';
 
-function App() {
-  const [jobs, setJobs] = useState([]);
-  const [selectedJob, setSelectedJob] = useState(null);
-  const [candidates, setCandidates] = useState([]);
-  const [loadingJobs, setLoadingJobs] = useState(true);
-  const [loadingCandidates, setLoadingCandidates] = useState(false);
-  const [evaluating, setEvaluating] = useState(false);
-  const [evaluationResults, setEvaluationResults] = useState([]);
-  const [error, setError] = useState(null);
-  const [statusFilter, setStatusFilter] = useState(null);
-  const [cvModalCandidate, setCvModalCandidate] = useState(null);
-  const [summaryRefreshTrigger, setSummaryRefreshTrigger] = useState(0); // NUEVO: trigger para refresh
-  const [selectedCandidates, setSelectedCandidates] = useState([]); // NUEVO: estado para candidatos seleccionados
+/**
+ * Componente para rutas protegidas
+ */
+function ProtectedRoute({ children }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [user, setUser] = useState(null);
 
-  // Load jobs on mount
   useEffect(() => {
-    loadJobs();
-  }, []);
+    const token = localStorage.getItem('authToken');
 
-  const loadJobs = async (refresh = false) => {
-    setLoadingJobs(true);
-    setError(null);
-    try {
-      const response = refresh ? await api.refreshJobs() : await api.getJobs();
-      setJobs(response.jobs);
-    } catch (err) {
-      setError(`Error cargando jobs: ${err.message}`);
-    } finally {
-      setLoadingJobs(false);
-    }
-  };
-
-  const loadCandidates = useCallback(async (jobId) => {
-    setLoadingCandidates(true);
-    setError(null);
-    try {
-      const response = await api.getCandidates(jobId);
-      setCandidates(response.candidates);
-    } catch (err) {
-      setError(`Error cargando candidatos: ${err.message}`);
-      setCandidates([]);
-    } finally {
-      setLoadingCandidates(false);
-    }
-  }, []);
-
-  const handleJobSelect = async (job) => {
-    setEvaluationResults([]);
-    setStatusFilter(null); // Reset filter when changing job
-    
-    if (job) {
-      // Load full job details (including descriptionPlain, requirements, responsibilities)
-      try {
-        const response = await api.getJob(job.id);
-        const fullJob = response.job; // Backend returns { job: {...} }
-        setSelectedJob(fullJob);
-        loadCandidates(job.id);
-      } catch (err) {
-        console.error('[App] Error loading job details:', err);
-        setSelectedJob(job); // Fallback to basic job data
-        loadCandidates(job.id);
-      }
-    } else {
-      setSelectedJob(null);
-      setCandidates([]);
-    }
-  };
-
-  // Reset selection when job changes
-  useEffect(() => {
-    setSelectedCandidates([]);
-  }, [selectedJob?.id]);
-
-  const handleEvaluate = async () => {
-    if (!selectedJob || selectedCandidates.length === 0) return;
-
-    setEvaluating(true);
-    setError(null);
-    setEvaluationResults([]);
-
-    try {
-      // Evaluate one by one to show progress
-      for (const candidate of selectedCandidates) {
-        try {
-          const result = await api.evaluateCandidate(selectedJob.id, candidate);
-          setEvaluationResults(prev => [...prev, result]);
-
-          // Update candidate in list
-          setCandidates(prev =>
-            prev.map(c =>
-              c.id === candidate.id
-                ? {
-                    ...c,
-                    evaluated: true,
-                    evaluation: {
-                      status: result.status,
-                      reasoning: result.reasoning,
-                      cv_text: result.cv_text || result.cvText, // OBJETIVO B: Guardar CV para auditoría
-                      evaluatedAt: new Date().toISOString()
-                    }
-                  }
-                : c
-            )
-          );
-        } catch (err) {
-          setEvaluationResults(prev => [
-            ...prev,
-            {
-              candidateId: candidate.id,
-              candidateName: candidate.name,
-              status: 'ERROR',
-              reasoning: err.message
-            }
-          ]);
-        }
-      }
-    } finally {
-      setEvaluating(false);
-      setSelectedCandidates([]); // Limpiar selección después de evaluar
-      // NUEVO: Refresh summary después de evaluar
-      setSummaryRefreshTrigger(prev => prev + 1);
-    }
-  };
-
-  const handleFilterChange = (filter) => {
-    setStatusFilter(filter);
-  };
-
-  const handleDeleteEvaluation = async (candidate) => {
-    console.log('[App] handleDeleteEvaluation called with candidate:', candidate);
-    
-    if (!candidate.evaluation) {
-      console.error('[App] No evaluation found for candidate:', candidate);
-      alert('❌ No se encontró evaluación para este candidato');
+    if (!token) {
+      setIsAuthenticated(false);
       return;
     }
-    
-    console.log('[App] Evaluation object:', candidate.evaluation);
-    const evaluationId = candidate.evaluation.id;
-    console.log('[App] Evaluation ID:', evaluationId, 'Type:', typeof evaluationId);
-    
-    if (!evaluationId) {
-      console.error('[App] Evaluation ID is missing:', candidate.evaluation);
-      alert('❌ Error: ID de evaluación no disponible.\n\nEsta evaluación puede ser de una versión anterior. Recarga la página e intenta nuevamente.');
-      return;
-    }
-    
-    const confirmDelete = window.confirm(
-      `¿Eliminar la evaluación de ${candidate.name}?\n\nEsto permitirá volver a evaluar al candidato con la última versión de su CV.`
-    );
-    
-    if (!confirmDelete) return;
 
-    try {
-      console.log('[App] Calling deleteEvaluation with ID:', evaluationId);
-      await api.deleteEvaluation(evaluationId);
-      
-      // Recargar candidatos para reflejar el cambio
-      loadCandidates(selectedJob.id);
-      
-      // NUEVO: Refresh summary después de eliminar
-      setSummaryRefreshTrigger(prev => prev + 1);
-      
-      // Mostrar mensaje de éxito
-      alert(`✅ Evaluación de ${candidate.name} eliminada correctamente.\n\nYa puedes volver a evaluar con el CV actualizado.`);
-    } catch (err) {
-      console.error('[App] Error deleting evaluation:', err);
-      alert(`❌ Error al eliminar la evaluación: ${err.message}`);
-    }
-  };
-
-  // Filter candidates based on status filter
-  const filteredCandidates = statusFilter
-    ? candidates.filter(candidate => {
-        if (statusFilter === 'PENDING') {
-          return !candidate.evaluated;
-        }
-        return candidate.evaluated && candidate.evaluation?.status === statusFilter;
+    // Verificar token con el backend
+    api.getCurrentUser()
+      .then(data => {
+        setUser(data.user);
+        setIsAuthenticated(true);
       })
-    : candidates;
+      .catch(() => {
+        // Token invalido, limpiar
+        localStorage.removeItem('authToken');
+        setIsAuthenticated(false);
+      });
+  }, []);
 
+  // Mientras verifica
+  if (isAuthenticated === null) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
+        <div className="spinner" style={{
+          width: '32px',
+          height: '32px',
+          border: '3px solid #FF0000',
+          borderTop: '3px solid transparent',
+          borderRadius: '50%',
+          animation: 'spin 0.6s linear infinite'
+        }}></div>
+        <p>Verificando sesion...</p>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // No autenticado
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Autenticado: pasar usuario al children
+  return React.cloneElement(children, { user });
+}
+
+export default function App() {
   return (
-    <div className="app">
-      <Header 
-        onEvaluate={handleEvaluate}
-        selectedCount={selectedCandidates.length}
-        evaluating={evaluating}
-      />
-
-      <main className="main-content">
-        {error && (
-          <div className="error-banner">
-            <span>{error}</span>
-            <button onClick={() => setError(null)}>Cerrar</button>
-          </div>
-        )}
-
-        <JobSelector
-          jobs={jobs}
-          selectedJob={selectedJob}
-          onSelectJob={handleJobSelect}
-          loading={loadingJobs}
+    <Router>
+      <Routes>
+        {/* Ruta de login */}
+        <Route
+          path="/"
+          element={<PublicRoute><Login /></PublicRoute>}
         />
 
-        {selectedJob && (
-          <>
-            <EvaluationDashboard 
-              jobId={selectedJob.id}
-              onFilterChange={handleFilterChange}
-              refreshTrigger={summaryRefreshTrigger}
-            />
+        {/* Callback de Google OAuth */}
+        <Route path="/callback" element={<LoginCallback />} />
 
-            <JobContextPanel job={selectedJob} />
-
-            <CandidateTable
-              candidates={filteredCandidates}
-              loading={loadingCandidates}
-              evaluating={evaluating}
-              onViewCV={setCvModalCandidate}
-              onDeleteEvaluation={handleDeleteEvaluation}
-              selectedCandidates={selectedCandidates}
-              onSelectionChange={setSelectedCandidates}
-            />
-
-            {evaluationResults.length > 0 && (
-              <EvaluationResult results={evaluationResults} />
-            )}
-          </>
-        )}
-
-        {!selectedJob && !loadingJobs && (
-          <div className="empty-state">
-            <h2>Selecciona un Job</h2>
-            <p>Elige un puesto de trabajo del selector para ver y evaluar candidatos.</p>
-          </div>
-        )}
-      </main>
-
-      <footer className="footer">
-        <p>CV Evaluator by Redbee - Powered by Claude AI</p>
-      </footer>
-
-      {/* CV Artifact Modal (OBJETIVO B) */}
-      {cvModalCandidate && (
-        <CvArtifactModal 
-          candidate={cvModalCandidate}
-          onClose={() => setCvModalCandidate(null)}
+        {/* Dashboard protegido */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
         />
-      )}
-    </div>
+
+        {/* Redirect cualquier otra ruta */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   );
 }
 
-export default App;
+/**
+ * Componente para rutas publicas (redirige si ya esta autenticado)
+ */
+function PublicRoute({ children }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+
+    if (!token) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    // Verificar si el token es valido
+    api.getCurrentUser()
+      .then(() => setIsAuthenticated(true))
+      .catch(() => {
+        localStorage.removeItem('authToken');
+        setIsAuthenticated(false);
+      });
+  }, []);
+
+  // Mientras verifica
+  if (isAuthenticated === null) {
+    return null; // O un loading spinner
+  }
+
+  // Si ya esta autenticado, redirigir a dashboard
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}

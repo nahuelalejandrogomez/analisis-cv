@@ -16,13 +16,15 @@
     "clear-db:confirm": "node scripts/clear-evaluations.js --confirm"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "axios": "^1.6.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "pg": "^8.11.3",
-    "axios": "^1.6.2",
+    "express": "^4.18.2",
+    "google-auth-library": "^10.5.0",
+    "jsonwebtoken": "^9.0.3",
+    "openai": "^4.52.0",
     "pdf-parse": "^1.1.1",
-    "openai": "^4.52.0"
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

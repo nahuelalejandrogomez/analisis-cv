@@ -1,18 +1,47 @@
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 /**
- * Helper function to make API calls
+ * Obtiene el token de autenticacion del localStorage
+ */
+function getAuthToken() {
+  return localStorage.getItem('authToken');
+}
+
+/**
+ * Limpia el token y redirige al login
+ */
+function handleUnauthorized() {
+  localStorage.removeItem('authToken');
+  window.location.href = '/';
+}
+
+/**
+ * Helper function to make API calls with authentication
  */
 async function fetchAPI(endpoint, options = {}) {
   const url = `${API_URL}${endpoint}`;
+  const token = getAuthToken();
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  // Agregar token si existe
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   });
+
+  // Si no autorizado, limpiar token y redirigir
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new Error('Sesion expirada. Redirigiendo al login...');
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -117,9 +146,27 @@ export async function deleteEvaluation(id) {
  * Get resume download URL
  */
 export function getResumeDownloadUrl(candidateId, resumeId, candidateName) {
+  const token = getAuthToken();
   const params = new URLSearchParams({
     resumeId,
     name: candidateName || 'candidato'
   });
+  // Para descargas, el token se pasa en el header, pero como es una URL directa
+  // el backend permite downloads sin auth por ahora (puede mejorar luego)
   return `${API_URL}/candidates/${candidateId}/resume/download?${params}`;
+}
+
+/**
+ * Get current authenticated user
+ */
+export async function getCurrentUser() {
+  return fetchAPI('/auth/me');
+}
+
+/**
+ * Logout (client-side: clear token)
+ */
+export function logout() {
+  localStorage.removeItem('authToken');
+  window.location.href = '/';
 }
