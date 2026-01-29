@@ -10,7 +10,7 @@ import * as api from '../api';
 import '../styles/components.css';
 import '../styles/responsive.css';
 
-function Dashboard({ user }) {
+function Dashboard() {
   const [jobs, setJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [candidates, setCandidates] = useState([]);
@@ -66,8 +66,7 @@ function Dashboard({ user }) {
         const fullJob = response.job;
         setSelectedJob(fullJob);
         loadCandidates(job.id);
-      } catch (err) {
-        console.error('[Dashboard] Error loading job details:', err);
+      } catch {
         setSelectedJob(job);
         loadCandidates(job.id);
       }
@@ -178,7 +177,6 @@ function Dashboard({ user }) {
         onEvaluate={handleEvaluate}
         selectedCount={selectedCandidates.length}
         evaluating={evaluating}
-        user={user}
       />
 
       <main className="main-content">

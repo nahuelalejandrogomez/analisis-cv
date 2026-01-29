@@ -1,13 +1,4 @@
-import React from 'react';
-import { logout } from '../api';
-
-function Header({ onEvaluate, selectedCount, evaluating, user }) {
-  const handleLogout = () => {
-    if (window.confirm('Cerrar sesion?')) {
-      logout();
-    }
-  };
-
+function Header({ onEvaluate, selectedCount, evaluating }) {
   return (
     <header className="header">
       <div className="header-content">
@@ -38,27 +29,6 @@ function Header({ onEvaluate, selectedCount, evaluating, user }) {
               `Evaluar Seleccionados (${selectedCount || 0})`
             )}
           </button>
-
-          {/* User info y logout */}
-          {user && (
-            <div className="user-menu">
-              {user.picture && (
-                <img
-                  src={user.picture}
-                  alt={user.name}
-                  className="user-avatar"
-                />
-              )}
-              <span className="user-name">{user.name?.split(' ')[0]}</span>
-              <button
-                className="btn btn-logout"
-                onClick={handleLogout}
-                title="Cerrar sesion"
-              >
-                Salir
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </header>
