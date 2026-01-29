@@ -5,19 +5,11 @@ const jobController = require('../controllers/jobController');
 const candidateController = require('../controllers/candidateController');
 const evaluationController = require('../controllers/evaluationController');
 const migrationController = require('../controllers/migrationController');
-const authController = require('../controllers/authController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 // ============================================================================
-// AUTH ROUTES (públicas)
-// ============================================================================
-router.get('/auth/google/login-url', authController.googleLoginUrl);
-router.get('/auth/google/callback', authController.googleCallback);
-router.post('/auth/logout', authController.logout);
-router.get('/auth/me', authMiddleware, authController.getCurrentUser);
-
-// ============================================================================
 // PROTECTED ROUTES (requieren autenticación)
+// Nota: Las rutas de auth están en /auth (no /api/auth) - ver authRoutes.js
 // ============================================================================
 
 // Jobs routes

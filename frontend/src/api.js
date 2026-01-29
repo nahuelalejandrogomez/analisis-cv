@@ -1,4 +1,6 @@
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// AUTH_URL es la base sin /api para las rutas de autenticacion
+const AUTH_URL = API_URL.replace(/\/api$/, '') + '/auth';
 
 /**
  * Obtiene el token de autenticacion del localStorage
@@ -146,13 +148,10 @@ export async function deleteEvaluation(id) {
  * Get resume download URL
  */
 export function getResumeDownloadUrl(candidateId, resumeId, candidateName) {
-  const token = getAuthToken();
   const params = new URLSearchParams({
     resumeId,
     name: candidateName || 'candidato'
   });
-  // Para descargas, el token se pasa en el header, pero como es una URL directa
-  // el backend permite downloads sin auth por ahora (puede mejorar luego)
   return `${API_URL}/candidates/${candidateId}/resume/download?${params}`;
 }
 
@@ -160,7 +159,39 @@ export function getResumeDownloadUrl(candidateId, resumeId, candidateName) {
  * Get current authenticated user
  */
 export async function getCurrentUser() {
-  return fetchAPI('/auth/me');
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No auth token');
+  }
+
+  const response = await fetch(`${AUTH_URL}/me`, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new Error('Sesion expirada');
+  }
+
+  if (!response.ok) {
+    throw new Error('Error obteniendo usuario');
+  }
+
+  return response.json();
+}
+
+/**
+ * Get Google OAuth login URL
+ */
+export async function getGoogleLoginUrl() {
+  const response = await fetch(`${AUTH_URL}/google/login-url`);
+  if (!response.ok) {
+    throw new Error('Error obteniendo URL de login');
+  }
+  return response.json();
 }
 
 /**

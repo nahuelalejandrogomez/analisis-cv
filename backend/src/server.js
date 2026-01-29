@@ -5,6 +5,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const routes = require('./routes');
+const authRoutes = require('./routes/authRoutes');
 const db = require('./config/database');
 
 const app = express();
@@ -55,7 +56,8 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 
 // Routes
-app.use('/api', routes);
+app.use('/auth', authRoutes);  // Auth routes en /auth (no /api/auth)
+app.use('/api', routes);        // API routes en /api
 
 // Health check
 app.get('/health', (req, res) => {

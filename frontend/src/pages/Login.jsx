@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { getGoogleLoginUrl } from '../api';
 import '../styles/login.css';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
@@ -15,9 +14,9 @@ export default function Login() {
     if (errorParam) {
       const errorMessages = {
         login_cancelled: 'Login cancelado',
-        no_code: 'Error en la autenticación',
+        no_code: 'Error en la autenticacion',
         unauthorized_domain: 'Solo empleados de Redbee (@redb.ee) pueden acceder',
-        auth_failed: 'Error de autenticación. Intenta de nuevo.',
+        auth_failed: 'Error de autenticacion. Intenta de nuevo.',
       };
       setError(errorMessages[errorParam] || 'Error desconocido');
     }
@@ -28,12 +27,9 @@ export default function Login() {
     setError(null);
 
     try {
-      // Obtener URL de login de Google desde el backend
-      const response = await fetch(`${API_URL}/auth/google/login-url`);
-      const data = await response.json();
+      const data = await getGoogleLoginUrl();
 
       if (data.loginUrl) {
-        // Redirigir a Google OAuth
         window.location.href = data.loginUrl;
       } else {
         setError('Error obteniendo URL de login');
