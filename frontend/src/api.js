@@ -77,6 +77,13 @@ export async function deleteEvaluation(id) {
   return fetchAPI(`/evaluations/${id}`, { method: 'DELETE' });
 }
 
+export async function deleteEvaluationsBatch(ids) {
+  return fetchAPI('/evaluations/delete-batch', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
+}
+
 export function getResumeDownloadUrl(candidateId, resumeId, candidateName) {
   const params = new URLSearchParams({
     resumeId,

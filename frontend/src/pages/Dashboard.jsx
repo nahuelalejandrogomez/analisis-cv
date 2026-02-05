@@ -82,14 +82,15 @@ function Dashboard() {
   }, [selectedJob?.id]);
 
   const handleEvaluate = async () => {
-    if (!selectedJob || selectedCandidates.length === 0) return;
+    const toEvaluate = selectedCandidates.filter(c => !c.evaluated);
+    if (!selectedJob || toEvaluate.length === 0) return;
 
     setEvaluating(true);
     setError(null);
     setEvaluationResults([]);
 
     try {
-      for (const candidate of selectedCandidates) {
+      for (const candidate of toEvaluate) {
         try {
           const result = await api.evaluateCandidate(selectedJob.id, candidate);
           setEvaluationResults(prev => [...prev, result]);
@@ -126,6 +127,38 @@ function Dashboard() {
       setEvaluating(false);
       setSelectedCandidates([]);
       setSummaryRefreshTrigger(prev => prev + 1);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const toDelete = selectedCandidates.filter(c => c.evaluated && c.evaluation?.id);
+    if (toDelete.length === 0) return;
+
+    const names = toDelete.map(c => c.name).join(', ');
+    const confirmDelete = window.confirm(
+      `Eliminar ${toDelete.length} evaluacion(es)?\n\n${names}\n\nEsto permitira volver a evaluar estos candidatos.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const ids = toDelete.map(c => c.evaluation.id);
+      await api.deleteEvaluationsBatch(ids);
+
+      // Update local state
+      const deletedIds = new Set(toDelete.map(c => c.id));
+      setCandidates(prev =>
+        prev.map(c =>
+          deletedIds.has(c.id)
+            ? { ...c, evaluated: false, evaluation: null }
+            : c
+        )
+      );
+
+      setSelectedCandidates([]);
+      setSummaryRefreshTrigger(prev => prev + 1);
+    } catch (err) {
+      setError(`Error al eliminar evaluaciones: ${err.message}`);
     }
   };
 
@@ -175,7 +208,9 @@ function Dashboard() {
     <div className="app">
       <Header
         onEvaluate={handleEvaluate}
-        selectedCount={selectedCandidates.length}
+        onBulkDelete={handleBulkDelete}
+        evaluateCount={selectedCandidates.filter(c => !c.evaluated).length}
+        deleteCount={selectedCandidates.filter(c => c.evaluated && c.evaluation?.id).length}
         evaluating={evaluating}
       />
 

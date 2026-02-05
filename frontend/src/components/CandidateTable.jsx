@@ -4,17 +4,14 @@ import * as api from '../api';
 function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEvaluation, selectedCandidates, onSelectionChange }) {
   const [selected, setSelected] = useState([]);
 
-  // Sincronizar selección interna con prop externa
   useEffect(() => {
     setSelected(selectedCandidates.map(c => c.id));
   }, [selectedCandidates]);
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      // Select only candidates not yet evaluated
-      const newSelected = candidates.filter(c => !c.evaluated);
-      setSelected(newSelected.map(c => c.id));
-      onSelectionChange(newSelected);
+      setSelected(candidates.map(c => c.id));
+      onSelectionChange([...candidates]);
     } else {
       setSelected([]);
       onSelectionChange([]);
@@ -25,38 +22,24 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
     const newSelected = selected.includes(candidateId)
       ? selected.filter(id => id !== candidateId)
       : [...selected, candidateId];
-    
+
     setSelected(newSelected);
-    
-    // Convertir IDs a objetos candidatos
     const selectedCandidatesObjects = candidates.filter(c => newSelected.includes(c.id));
     onSelectionChange(selectedCandidatesObjects);
   };
 
   const handleDownloadCV = async (candidate) => {
     try {
-      console.log('[Download CV] Obteniendo metadata para:', candidate.name, candidate.id);
-      
-      // Obtener metadata del CV desde Lever en tiempo real
       const metadata = await api.getCVMetadata(candidate.id);
-      
-      console.log('[Download CV] Metadata recibida:', metadata);
-      
+
       if (metadata && metadata.hasCV && metadata.fileId) {
-        console.log('[Download CV] Descargando vía proxy del backend...');
-        
-        // Usar endpoint del backend que actúa como proxy autenticado
         const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
         const downloadUrl = `${API_URL}/candidates/${candidate.id}/resume/download?resumeId=${metadata.fileId}&source=${metadata.source || 'resumes'}&name=${encodeURIComponent(candidate.name)}`;
-        
-        console.log('[Download CV] URL de descarga:', downloadUrl);
         window.open(downloadUrl, '_blank');
       } else {
-        console.warn('[Download CV] No se encontró CV. Metadata:', metadata);
         alert(`No se encontró CV disponible para ${candidate.name} en Lever`);
       }
     } catch (error) {
-      console.error('[Download CV] Error:', error);
       alert(`Error al obtener el CV de ${candidate.name}. Por favor intenta nuevamente.\n\nError: ${error.message}`);
     }
   };
@@ -125,8 +108,8 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
                 <input
                   type="checkbox"
                   onChange={handleSelectAll}
-                  checked={selected.length === unevaluatedCount && unevaluatedCount > 0}
-                  disabled={unevaluatedCount === 0}
+                  checked={selected.length === candidates.length && candidates.length > 0}
+                  disabled={candidates.length === 0}
                 />
               </th>
               <th>Nombre</th>
@@ -150,7 +133,6 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
                     type="checkbox"
                     checked={selected.includes(candidate.id)}
                     onChange={() => handleSelect(candidate.id)}
-                    disabled={candidate.evaluated}
                   />
                 </td>
                 <td className="td-name">

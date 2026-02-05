@@ -97,7 +97,6 @@ async function getCVMetadata(req, res, next) {
       source: resumeData.source // 'resumes' or 'files'
     });
   } catch (error) {
-    console.error('Error getting CV metadata:', error.message);
     next(error);
   }
 }

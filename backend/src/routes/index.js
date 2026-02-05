@@ -22,6 +22,7 @@ router.post('/evaluate/batch', evaluationController.evaluateBatch);
 router.get('/evaluations', evaluationController.getEvaluations);
 router.get('/evaluations/stats/:jobId', evaluationController.getStats);
 router.get('/jobs/:jobId/evaluations/summary', evaluationController.getSummary);
+router.post('/evaluations/delete-batch', evaluationController.deleteEvaluationsBatch);
 router.delete('/evaluations/clear/:status', evaluationController.clearEvaluationsByStatus);
 router.delete('/evaluations/clear', evaluationController.clearEvaluations);
 router.delete('/evaluations/:id', evaluationController.deleteEvaluation);

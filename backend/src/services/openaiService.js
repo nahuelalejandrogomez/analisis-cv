@@ -43,11 +43,8 @@ El reasoning DEBE ser máximo 30 palabras. Sé conciso.`;
  */
 async function evaluateCV(jobDescription, cvText) {
   // GUARDRAIL SECUNDARIO: Defensa en profundidad
-  // El guardrail principal está en evaluationService.js
-  // Este es un fallback por si algo bypasea el primero
   const charCount = cvText?.trim()?.length || 0;
   if (!cvText || charCount < 50) {
-    console.error(`[OpenAI] ❌ GUARDRAIL SECUNDARIO: CV insuficiente (${charCount} chars). No se enviará al LLM.`);
     return {
       status: 'AMARILLO',
       reasoning: 'CV no disponible o ilegible. Reintentar extracción y reevaluar. Revisión manual recomendada.'
@@ -59,8 +56,6 @@ async function evaluateCV(jobDescription, cvText) {
     .replace('{cvText}', cvText);
 
   try {
-    console.log(`[OpenAI] Evaluando con modelo ${OPENAI_MODEL}...`);
-
     const response = await openai.chat.completions.create({
       model: OPENAI_MODEL,
       max_tokens: 200,
@@ -73,12 +68,10 @@ async function evaluateCV(jobDescription, cvText) {
     });
 
     const content = response.choices[0].message.content.trim();
-    console.log('[OpenAI] Respuesta recibida');
 
     // Parse JSON response
     let evaluation;
     try {
-      // Clean up response if it has markdown backticks
       let cleanContent = content;
       if (cleanContent.startsWith('```json')) {
         cleanContent = cleanContent.replace(/^```json\n?/, '').replace(/\n?```$/, '');
@@ -86,15 +79,13 @@ async function evaluateCV(jobDescription, cvText) {
         cleanContent = cleanContent.replace(/^```\n?/, '').replace(/\n?```$/, '');
       }
 
-      // Try to extract JSON if wrapped in text
       const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         cleanContent = jsonMatch[0];
       }
 
       evaluation = JSON.parse(cleanContent);
-    } catch (parseError) {
-      console.error('[OpenAI] Error parseando respuesta:', content);
+    } catch {
       return {
         status: 'AMARILLO',
         reasoning: 'Error al procesar la evaluación. Revisar manualmente.'
@@ -110,45 +101,33 @@ async function evaluateCV(jobDescription, cvText) {
     }
 
     // POST-LLM GUARDRAIL: Detectar contradicciones usando LLM
-    console.log('[Guardrail] Verificando contradicciones con LLM...');
     try {
       const requiredTechs = await skillMatchingLLM.extractRequiredTechsLLM(jobDescription);
-      console.log(`[Guardrail] Techs requeridas: ${requiredTechs.join(', ')}`);
-      
+
       const contradictionCheck = await skillMatchingLLM.detectContradictionsLLM(
-        cvText, 
-        evaluation.reasoning, 
+        cvText,
+        evaluation.reasoning,
         requiredTechs
       );
 
       if (contradictionCheck.hasContradiction) {
-        console.warn('⚠️  [Guardrail] Contradicción detectada:', contradictionCheck.warnings);
-        
-        // Reescribir reasoning basado en techs presentes
-        // NO cambiar status (mantener decisión del LLM sobre fit general)
         if (contradictionCheck.presentTechs && contradictionCheck.presentTechs.length > 0) {
           const techsList = contradictionCheck.presentTechs.slice(0, 3).join(', ');
           evaluation.reasoning = `Tiene: ${techsList}. Evaluar profundidad de experiencia en estas tecnologías.`;
-          console.log('✅ [Guardrail] Reasoning corregido');
         }
-      } else {
-        console.log('✅ [Guardrail] Sin contradicciones');
       }
-    } catch (guardrailError) {
-      console.warn('⚠️  [Guardrail] Error en verificación, manteniendo reasoning original:', guardrailError.message);
+    } catch {
+      // Error en verificación, mantener reasoning original
     }
 
     // Limitar a 30 palabras
     const words = evaluation.reasoning.split(/\s+/);
     if (words.length > 30) {
-      console.log(`[Guardrail] Reasoning excede 30 palabras (${words.length}). Truncando...`);
       evaluation.reasoning = words.slice(0, 30).join(' ') + '...';
     }
 
-    console.log(`✅ Evaluación completada: ${evaluation.status}`);
     return evaluation;
   } catch (error) {
-    console.error('❌ Error calling OpenAI API:', error.message);
     throw new Error(`OpenAI API error: ${error.message}`);
   }
 }
@@ -180,7 +159,6 @@ async function evaluateBatch(candidates, delayMs = 1500) {
       });
     }
 
-    // Delay between calls to avoid rate limiting
     if (i < candidates.length - 1) {
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }

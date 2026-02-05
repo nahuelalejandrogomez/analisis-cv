@@ -1,6 +1,6 @@
 /**
  * Skill Matching con LLM (Versión Simplificada)
- * 
+ *
  * En lugar de mantener diccionarios y regex, usamos el LLM para:
  * 1. Normalizar tecnologías semánticamente
  * 2. Detectar contradicciones de forma más inteligente
@@ -39,8 +39,7 @@ JSON:`;
     const content = response.choices[0].message.content.trim();
     const techs = JSON.parse(content);
     return Array.isArray(techs) ? techs : [];
-  } catch (error) {
-    console.warn('[LLM Extract] Error:', error.message);
+  } catch {
     return [];
   }
 }
@@ -69,8 +68,7 @@ Responde SOLO "SI" o "NO":`;
 
     const answer = response.choices[0].message.content.trim().toUpperCase();
     return answer === 'SI' || answer === 'SÍ' || answer === 'YES';
-  } catch (error) {
-    console.warn(`[LLM TechPresent] Error verificando ${tech}, fallback a false:`, error.message);
+  } catch {
     return false;
   }
 }
@@ -108,14 +106,13 @@ JSON:
 
     const content = response.choices[0].message.content.trim();
     const result = JSON.parse(content);
-    
+
     return {
       hasContradiction: result.hasContradiction || false,
       warnings: result.contradictions || [],
       presentTechs: result.presentTechs || []
     };
-  } catch (error) {
-    console.warn('[LLM Contradictions] Error:', error.message);
+  } catch {
     return {
       hasContradiction: false,
       warnings: [],
@@ -132,8 +129,7 @@ JSON:
  */
 async function generateSkillsMetadataLLM(cvText, requiredTechs) {
   if (requiredTechs.length === 0) return '';
-  
-  // Para no hacer demasiadas llamadas a LLM, hacer una verificación en batch
+
   const prompt = `De estas tecnologías: ${requiredTechs.join(', ')}
 ¿Cuáles están mencionadas en el CV (incluyendo variantes)?
 
@@ -152,12 +148,11 @@ Responde solo con array JSON de las que SÍ están:`;
 
     const content = response.choices[0].message.content.trim();
     const presentTechs = JSON.parse(content);
-    
+
     if (presentTechs.length === 0) return '';
-    
+
     return `\n**TECNOLOGÍAS DETECTADAS EN CV (considerando variantes):**\n${presentTechs.join(', ')}\n`;
-  } catch (error) {
-    console.warn('[LLM Metadata] Error generando metadata, fallback vacío:', error.message);
+  } catch {
     return '';
   }
 }

@@ -152,30 +152,45 @@ async function getSummary(req, res, next) {
 async function deleteEvaluation(req, res, next) {
   try {
     const { id } = req.params;
-    
-    console.log(`[Delete Evaluation] Request received for ID: "${id}" (type: ${typeof id})`);
-    
-    // Validate ID
+
     if (!id || id === 'undefined' || id === 'null') {
-      console.error('[Delete Evaluation] Invalid ID received:', id);
-      return res.status(400).json({ 
-        error: 'ID de evaluación inválido',
-        receivedId: id,
-        type: typeof id
-      });
+      return res.status(400).json({ error: 'ID de evaluación inválido' });
     }
-    
+
     const deleted = await evaluationService.deleteEvaluation(id);
 
     if (!deleted) {
-      console.warn('[Delete Evaluation] Evaluation not found for ID:', id);
       return res.status(404).json({ error: 'Evaluation not found' });
     }
 
-    console.log(`[Delete Evaluation] ✅ Successfully deleted evaluation ID: ${id}`);
     res.json({ success: true, deleted });
   } catch (error) {
-    console.error('[Delete Evaluation] ❌ Error:', error.message);
+    next(error);
+  }
+}
+
+/**
+ * POST /api/evaluations/delete-batch
+ * Delete multiple evaluations by IDs
+ */
+async function deleteEvaluationsBatch(req, res, next) {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        error: 'ids array is required and must not be empty'
+      });
+    }
+
+    const deleted = await evaluationService.deleteEvaluationsBatch(ids);
+
+    res.json({
+      success: true,
+      deletedCount: deleted.length,
+      requestedCount: ids.length
+    });
+  } catch (error) {
     next(error);
   }
 }
@@ -270,6 +285,7 @@ module.exports = {
   getStats,
   getSummary,
   deleteEvaluation,
+  deleteEvaluationsBatch,
   clearEvaluations,
   clearEvaluationsByStatus
 };

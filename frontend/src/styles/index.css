@@ -223,6 +223,18 @@ body {
   box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
 }
 
+.btn-danger {
+  background: #dc3545;
+  color: var(--white);
+  box-shadow: 0 4px 14px rgba(220, 53, 69, 0.3);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #bb2d3b;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+}
+
 .btn-secondary {
   background: var(--white);
   color: var(--navy);

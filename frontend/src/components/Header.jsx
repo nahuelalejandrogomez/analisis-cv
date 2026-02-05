@@ -1,4 +1,4 @@
-function Header({ onEvaluate, selectedCount, evaluating }) {
+function Header({ onEvaluate, onBulkDelete, evaluateCount, deleteCount, evaluating }) {
   return (
     <header className="header">
       <div className="header-content">
@@ -15,10 +15,19 @@ function Header({ onEvaluate, selectedCount, evaluating }) {
         </div>
 
         <div className="header-actions">
+          {deleteCount > 0 && (
+            <button
+              className="btn btn-danger"
+              onClick={onBulkDelete}
+              disabled={evaluating}
+            >
+              Borrar Seleccionados ({deleteCount})
+            </button>
+          )}
           <button
             className="btn btn-primary"
             onClick={onEvaluate}
-            disabled={!selectedCount || selectedCount === 0 || evaluating}
+            disabled={!evaluateCount || evaluateCount === 0 || evaluating}
           >
             {evaluating ? (
               <>
@@ -26,7 +35,7 @@ function Header({ onEvaluate, selectedCount, evaluating }) {
                 Evaluando...
               </>
             ) : (
-              `Evaluar Seleccionados (${selectedCount || 0})`
+              `Evaluar Seleccionados (${evaluateCount || 0})`
             )}
           </button>
         </div>
