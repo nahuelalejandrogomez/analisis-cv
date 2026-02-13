@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import UserFormModal from '../components/admin/UserFormModal';
 import ChangePasswordModal from '../components/admin/ChangePasswordModal';
@@ -14,7 +13,6 @@ function AdminPanel() {
   const [editingUser, setEditingUser] = useState(null);
   const [passwordUser, setPasswordUser] = useState(null);
   const { user: currentUser, logout } = useAuth();
-  const navigate = useNavigate();
 
   const loadUsers = useCallback(async () => {
     try {
