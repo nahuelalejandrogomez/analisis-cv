@@ -19,12 +19,9 @@ function Login() {
     setLoading(true);
 
     try {
-      const user = await login(email, password, rememberMe);
-      if (user.role === 'administrator') {
-        navigate('/admin');
-      } else {
-        navigate('/');
-      }
+      await login(email, password, rememberMe);
+      // Always redirect to main dashboard (CV Analysis)
+      navigate('/');
     } catch (err) {
       setError(err.message);
     } finally {

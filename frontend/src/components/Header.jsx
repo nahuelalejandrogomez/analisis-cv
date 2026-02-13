@@ -1,17 +1,18 @@
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-function Header({ onEvaluate, onBulkDelete, evaluateCount, deleteCount, evaluating }) {
-  const { user, logout } = useAuth();
+function Header({ onEvaluate, selectedCount, evaluating }) {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   return (
     <header className="header">
       <div className="header-content">
         <div className="logo">
-          <img
-            src="/Logos/REDBEE-MARCA.png"
-            alt="Redbee Logo"
+          <img 
+            src="/Logos/REDBEE-MARCA.png" 
+            alt="Redbee Logo" 
             className="logo-image"
           />
           <div className="logo-text">
@@ -21,19 +22,29 @@ function Header({ onEvaluate, onBulkDelete, evaluateCount, deleteCount, evaluati
         </div>
 
         <div className="header-actions">
-          {deleteCount > 0 && (
-            <button
-              className="btn btn-danger"
-              onClick={onBulkDelete}
-              disabled={evaluating}
+          {/* Navigation menu */}
+          <nav className="header-nav">
+            <button 
+              className="btn btn-link" 
+              onClick={() => navigate('/')}
             >
-              Borrar Seleccionados ({deleteCount})
+              Análisis
             </button>
-          )}
-          <button
-            className="btn btn-primary"
+            {user?.role === 'administrator' && (
+              <button 
+                className="btn btn-link" 
+                onClick={() => navigate('/admin')}
+              >
+                Usuarios
+              </button>
+            )}
+          </nav>
+
+          {/* Evaluate button */}
+          <button 
+            className="btn btn-primary" 
             onClick={onEvaluate}
-            disabled={!evaluateCount || evaluateCount === 0 || evaluating}
+            disabled={!selectedCount || selectedCount === 0 || evaluating}
           >
             {evaluating ? (
               <>
@@ -41,22 +52,13 @@ function Header({ onEvaluate, onBulkDelete, evaluateCount, deleteCount, evaluati
                 Evaluando...
               </>
             ) : (
-              `Evaluar Seleccionados (${evaluateCount || 0})`
+              `Evaluar Seleccionados (${selectedCount || 0})`
             )}
           </button>
 
+          {/* User info and logout */}
           <div className="header-user-section">
-            {user?.role === 'administrator' && (
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => navigate('/admin')}
-              >
-                Panel Admin
-              </button>
-            )}
-            <div className="user-info">
-              <span className="user-name">{user?.name}</span>
-            </div>
+            <span className="user-name">{user?.name}</span>
             <button className="btn btn-secondary btn-sm" onClick={logout}>
               Salir
             </button>

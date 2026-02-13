@@ -174,3 +174,34 @@
   padding: 8px 16px;
   font-size: 0.8rem;
 }
+
+/* Header navigation */
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-right: var(--spacing-md);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--gray-600);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+}
+
+.btn-link:hover {
+  color: var(--red-primary);
+  background: var(--gray-50);
+}
+
+.btn-link.active {
+  color: var(--red-primary);
+  background: var(--rojo-bg);
+}

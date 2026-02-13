@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import UserFormModal from '../components/admin/UserFormModal';
 import ChangePasswordModal from '../components/admin/ChangePasswordModal';
@@ -6,6 +7,7 @@ import * as adminApi from '../api/adminApi';
 import '../styles/admin.css';
 
 function AdminPanel() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -84,6 +86,23 @@ function AdminPanel() {
             </div>
           </div>
           <div className="header-actions">
+            {/* Navigation menu */}
+            <nav className="header-nav">
+              <button 
+                className="btn btn-link" 
+                onClick={() => navigate('/')}
+              >
+                Análisis
+              </button>
+              <button 
+                className="btn btn-link active" 
+                onClick={() => navigate('/admin')}
+              >
+                Usuarios
+              </button>
+            </nav>
+
+            {/* User info and logout */}
             <div className="user-info">
               <span className="user-name">{currentUser?.name}</span>
               <span className="user-role-badge role-administrator">Admin</span>
