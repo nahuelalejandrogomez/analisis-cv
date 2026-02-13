@@ -33,34 +33,6 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
     onSelectionChange(selectedCandidatesObjects);
   };
 
-  const handleDownloadCV = async (candidate) => {
-    try {
-      console.log('[Download CV] Obteniendo metadata para:', candidate.name, candidate.id);
-      
-      // Obtener metadata del CV desde Lever en tiempo real
-      const metadata = await api.getCVMetadata(candidate.id);
-      
-      console.log('[Download CV] Metadata recibida:', metadata);
-      
-      if (metadata && metadata.hasCV && metadata.fileId) {
-        console.log('[Download CV] Descargando vía proxy del backend...');
-        
-        // Usar endpoint del backend que actúa como proxy autenticado
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-        const downloadUrl = `${API_URL}/candidates/${candidate.id}/resume/download?resumeId=${metadata.fileId}&source=${metadata.source || 'resumes'}&name=${encodeURIComponent(candidate.name)}`;
-        
-        console.log('[Download CV] URL de descarga:', downloadUrl);
-        window.open(downloadUrl, '_blank');
-      } else {
-        console.warn('[Download CV] No se encontró CV. Metadata:', metadata);
-        alert(`No se encontró CV disponible para ${candidate.name} en Lever`);
-      }
-    } catch (error) {
-      console.error('[Download CV] Error:', error);
-      alert(`Error al obtener el CV de ${candidate.name}. Por favor intenta nuevamente.\n\nError: ${error.message}`);
-    }
-  };
-
   const getStatusBadge = (evaluation) => {
     if (!evaluation) return null;
 
@@ -176,21 +148,19 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
                   )}
                 </td>
                 <td className="td-cv">
-                  {candidate.hasResume ? (
-                    <button
-                      className="download-btn"
-                      onClick={() => handleDownloadCV(candidate)}
-                      title="Descargar CV"
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                      </svg>
-                    </button>
-                  ) : (
-                    <span className="cv-unavailable">-</span>
-                  )}
+                  <a
+                    href={`https://hire.lever.co/candidates/${candidate.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="lever-link"
+                    title="Ver postulación en Lever"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                      <polyline points="15 3 21 3 21 9"/>
+                      <line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                  </a>
                 </td>
                 <td className="td-status">
                   {getStatusBadge(candidate.evaluation)}

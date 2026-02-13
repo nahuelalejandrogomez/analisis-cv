@@ -605,29 +605,21 @@
   width: 70px;
 }
 
-.download-btn {
+.lever-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: none;
-  border: none;
   color: var(--gray-600);
   padding: 6px;
   border-radius: var(--radius-md);
-  cursor: pointer;
   transition: all 0.2s ease;
+  text-decoration: none;
 }
 
-.download-btn:hover {
+.lever-link:hover {
   background: var(--gray-100);
   color: var(--red-primary);
   transform: scale(1.1);
-}
-
-.download-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  transform: none;
 }
 
 /* ======================
