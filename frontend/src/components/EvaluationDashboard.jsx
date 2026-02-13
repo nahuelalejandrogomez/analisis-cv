@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-
-// Use the same API_URL as api.js
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import * as api from '../api';
 
 /**
  * Dashboard with KPI cards for evaluation summary
@@ -18,10 +16,7 @@ export default function EvaluationDashboard({ jobId, onFilterChange, refreshTrig
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_URL}/jobs/${jobId}/evaluations/summary`);
-      if (!response.ok) throw new Error('Error loading summary');
-      
-      const data = await response.json();
+      const data = await api.getEvaluationSummary(jobId);
       setSummary(data);
     } catch (err) {
       console.error('Error loading evaluation summary:', err);

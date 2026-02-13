@@ -93,6 +93,10 @@ export async function getEvaluationStats(jobId) {
   return fetchAPI(`/evaluations/stats/${jobId}`);
 }
 
+export async function getEvaluationSummary(jobId) {
+  return fetchAPI(`/jobs/${jobId}/evaluations/summary`);
+}
+
 export async function deleteEvaluation(id) {
   return fetchAPI(`/evaluations/${id}`, { method: 'DELETE' });
 }
