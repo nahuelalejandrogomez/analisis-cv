@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import * as api from '../api';
 
 function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEvaluation, selectedCandidates, onSelectionChange }) {
   const [selected, setSelected] = useState([]);
