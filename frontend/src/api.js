@@ -101,6 +101,12 @@ export async function deleteEvaluation(id) {
   return fetchAPI(`/evaluations/${id}`, { method: 'DELETE' });
 }
 
+export async function deleteEvaluationByCandidate(jobId, candidateId) {
+  return fetchAPI(`/jobs/${jobId}/candidates/${candidateId}/evaluation`, { 
+    method: 'DELETE' 
+  });
+}
+
 export async function deleteEvaluationsBatch(ids) {
   return fetchAPI('/evaluations/delete-batch', {
     method: 'POST',

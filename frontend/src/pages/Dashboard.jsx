@@ -140,13 +140,6 @@ function Dashboard() {
       return;
     }
 
-    const evaluationId = candidate.evaluation.id;
-
-    if (!evaluationId) {
-      alert('Error: ID de evaluacion no disponible.\n\nEsta evaluacion puede ser de una version anterior. Recarga la pagina e intenta nuevamente.');
-      return;
-    }
-
     const confirmDelete = window.confirm(
       `Eliminar la evaluacion de ${candidate.name}?\n\nEsto permitira volver a evaluar al candidato con la ultima version de su CV.`
     );
@@ -154,11 +147,23 @@ function Dashboard() {
     if (!confirmDelete) return;
 
     try {
-      await api.deleteEvaluation(evaluationId);
+      const evaluationId = candidate.evaluation.id;
+      
+      // Try deleting by evaluation ID first (preferred method)
+      if (evaluationId) {
+        console.log(`Deleting evaluation by ID: ${evaluationId}`);
+        await api.deleteEvaluation(evaluationId);
+      } else {
+        // Fallback: Delete by jobId + candidateId
+        console.log(`Fallback: Deleting evaluation by jobId=${selectedJob.id}, candidateId=${candidate.id}`);
+        await api.deleteEvaluationByCandidate(selectedJob.id, candidate.id);
+      }
+
       loadCandidates(selectedJob.id);
       setSummaryRefreshTrigger(prev => prev + 1);
       alert(`Evaluacion de ${candidate.name} eliminada correctamente.\n\nYa puedes volver a evaluar con el CV actualizado.`);
     } catch (err) {
+      console.error('Error deleting evaluation:', err);
       alert(`Error al eliminar la evaluacion: ${err.message}`);
     }
   };

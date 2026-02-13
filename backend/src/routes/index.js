@@ -37,5 +37,6 @@ router.get('/jobs/:jobId/evaluations/summary', evaluationController.getSummary);
 router.delete('/evaluations/clear/:status', evaluationController.clearEvaluationsByStatus);
 router.delete('/evaluations/clear', evaluationController.clearEvaluations);
 router.delete('/evaluations/:id', evaluationController.deleteEvaluation);
+router.delete('/jobs/:jobId/candidates/:candidateId/evaluation', evaluationController.deleteEvaluationByCandidate);
 
 module.exports = router;

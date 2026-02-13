@@ -263,6 +263,43 @@ async function clearEvaluationsByStatus(req, res, next) {
   }
 }
 
+/**
+ * DELETE /api/jobs/:jobId/candidates/:candidateId/evaluation
+ * Delete evaluation by jobId + candidateId (fallback method)
+ */
+async function deleteEvaluationByCandidate(req, res, next) {
+  try {
+    const { jobId, candidateId } = req.params;
+    
+    console.log(`[Delete Evaluation] By jobId=${jobId}, candidateId=${candidateId}`);
+    
+    const db = require('../config/database');
+    const result = await db.query(
+      'DELETE FROM evaluations WHERE job_id = $1 AND candidate_id = $2 RETURNING *',
+      [jobId, candidateId]
+    );
+
+    if (result.rowCount === 0) {
+      console.warn('[Delete Evaluation] Not found for jobId/candidateId');
+      return res.status(404).json({ error: 'Evaluation not found' });
+    }
+
+    const deleted = result.rows[0];
+    console.log(`[Delete Evaluation] ✅ Successfully deleted evaluation ID: ${deleted.id}`);
+    
+    res.json({ 
+      success: true, 
+      deleted: {
+        id: deleted.id,
+        candidateName: deleted.candidate_name
+      }
+    });
+  } catch (error) {
+    console.error('[Delete Evaluation] ❌ Error:', error.message);
+    next(error);
+  }
+}
+
 module.exports = {
   evaluateCandidate,
   evaluateBatch,
@@ -270,6 +307,7 @@ module.exports = {
   getStats,
   getSummary,
   deleteEvaluation,
+  deleteEvaluationByCandidate,
   clearEvaluations,
   clearEvaluationsByStatus
 };
