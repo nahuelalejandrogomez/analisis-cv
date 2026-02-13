@@ -76,7 +76,8 @@ async function extractTextFromPDF(pdfBuffer) {
   try {
     const data = await pdfParse(pdfBuffer);
     return data.text || '';
-  } catch {
+  } catch (error) {
+    console.error('Error extracting PDF text:', error.message);
     return '';
   }
 }
@@ -87,12 +88,23 @@ async function extractTextFromPDF(pdfBuffer) {
  */
 async function getCVText(opportunityId) {
   try {
+    console.log(`[CV Extract] Obteniendo CV para candidato: ${opportunityId}`);
+    
+    // First try to get parsed data from Lever
     const resumeData = await leverService.getResumeParsedData(opportunityId);
 
     if (!resumeData) {
-      return { text: '', source: 'none', metadata: null };
+      console.log(`[CV Extract] No se encontró resume data en Lever para: ${opportunityId}`);
+      return { 
+        text: '', 
+        source: 'none',
+        metadata: null
+      };
     }
 
+    console.log(`[CV Extract] Resume encontrado - ID: ${resumeData.id}, FileName: ${resumeData.fileName}`);
+
+    // Prepare metadata
     const metadata = {
       fileName: resumeData.fileName || null,
       fileUrl: resumeData.downloadUrl || null,
@@ -105,6 +117,7 @@ async function getCVText(opportunityId) {
 
     // Strategy 1: Try Lever's parsed data first
     if (resumeData.parsedData) {
+      console.log(`[CV Extract] Lever tiene parsedData disponible`);
       const parsed = resumeData.parsedData;
       let parsedText = '';
 
@@ -128,49 +141,71 @@ async function getCVText(opportunityId) {
       }
 
       if (parsedText.length > 50) {
+        console.log(`[CV Extract] Texto extraído de parsedData: ${parsedText.length} caracteres`);
         finalText = parsedText;
         extractionMethods.push('lever_parsed');
       }
     }
 
     // Strategy 2: ALWAYS try to download and extract PDF (even if parsedData exists)
+    // This ensures we get the full CV content
     if (resumeData.id) {
+      console.log(`[CV Extract] Intentando descargar PDF - Opportunity: ${opportunityId}, Resume ID: ${resumeData.id}, Source: ${resumeData.source || 'resumes'}`);
       try {
         const pdfBuffer = await leverService.downloadResume(opportunityId, resumeData.id, resumeData.source);
+        console.log(`[CV Extract] ✅ PDF descargado exitosamente: ${pdfBuffer.length} bytes`);
         metadata.fileSize = pdfBuffer.length;
-
+        
+        console.log(`[CV Extract] Extrayendo texto del PDF con pdf-parse...`);
         const pdfText = await extractTextFromPDF(pdfBuffer);
-
+        console.log(`[CV Extract] Texto extraído del PDF: ${pdfText.length} caracteres`);
+        
         if (pdfText && pdfText.length > 100) {
+          // PDF extraction successful and substantial
           extractionMethods.push('pdf_extracted');
-
+          
+          // If PDF has more content than parsedData, use PDF
           if (pdfText.length > finalText.length * 1.5) {
+            console.log(`[CV Extract] PDF tiene más contenido (${pdfText.length} vs ${finalText.length}), usando PDF`);
             finalText = pdfText;
           } else if (finalText.length === 0) {
+            // No parsedData, use PDF
             finalText = pdfText;
           } else {
+            // Combine both sources
+            console.log(`[CV Extract] Combinando parsedData y PDF`);
             finalText = `${finalText}\n\n--- CONTENIDO ADICIONAL DEL PDF ---\n\n${pdfText}`;
           }
         } else if (pdfText && pdfText.length > 0) {
+          console.warn(`[CV Extract] ⚠️  PDF extraído pero contenido mínimo: ${pdfText.length} caracteres (umbral: 100)`);
           extractionMethods.push('insufficient_content');
         } else {
+          console.warn(`[CV Extract] ⚠️  PDF descargado pero no se pudo extraer texto (posiblemente es imagen escaneada)`);
           extractionMethods.push('extraction_failed');
         }
-      } catch {
+      } catch (downloadError) {
+        console.error(`[CV Extract] ❌ Error downloading/parsing PDF:`, downloadError.message);
+        console.error(`[CV Extract] ❌ Error stack:`, downloadError.stack);
         extractionMethods.push('download_failed');
       }
+    } else {
+      console.warn(`[CV Extract] ⚠️  No resume ID available - skipping PDF download`);
     }
 
-    metadata.extractionMethod = extractionMethods.length > 0
-      ? extractionMethods.join('+')
+    // Set extraction method
+    metadata.extractionMethod = extractionMethods.length > 0 
+      ? extractionMethods.join('+') 
       : 'no_extraction';
 
     if (finalText.length > 50) {
+      console.log(`[CV Extract] ✅ Extracción exitosa: ${finalText.length} caracteres, método: ${metadata.extractionMethod}`);
       return { text: finalText, source: metadata.extractionMethod, metadata };
     } else {
+      console.log(`[CV Extract] ⚠️  No se pudo obtener contenido suficiente del CV (${finalText.length} caracteres)`);
       return { text: finalText, source: 'insufficient_content', metadata };
     }
-  } catch {
+  } catch (error) {
+    console.error(`[CV Extract] ❌ Error general getting CV text:`, error.message);
     return { text: '', source: 'error', metadata: null };
   }
 }
@@ -210,7 +245,13 @@ ${job.additionalText || ''}
   // Get CV text
   const { text: cvText, source: cvSource, metadata: cvMetadata } = await getCVText(candidateId);
 
+  console.log(`[Evaluation] Candidato: ${candidateName} (${candidateId})`);
+  console.log(`[Evaluation] CV Source: ${cvSource}, Length: ${cvText?.length || 0} caracteres`);
+  console.log(`[Evaluation] Extraction Method: ${cvMetadata?.extractionMethod || 'unknown'}`);
+
+  // =========================================================================
   // GUARDRAIL: Verificar si hay CV suficiente antes de llamar al LLM
+  // =========================================================================
   const llmCheck = shouldCallLLM({
     cvText,
     extractionMethod: cvMetadata?.extractionMethod || cvSource,
@@ -218,6 +259,10 @@ ${job.additionalText || ''}
   });
 
   if (!llmCheck.shouldCall) {
+    console.error(`[Evaluation] ❌ GUARDRAIL ACTIVADO para ${candidateName}`);
+    console.error(`[Evaluation] ❌ Razón: ${llmCheck.reason}`);
+    console.error(`[Evaluation] ❌ CV Source: ${cvSource}, Method: ${cvMetadata?.extractionMethod}, Chars: ${cvText?.length || 0}`);
+
     // Devolver AMARILLO con reasoning fijo - NO llamar al LLM
     const evaluation = { ...NO_CV_RESPONSE };
 
@@ -243,7 +288,10 @@ ${job.additionalText || ''}
     };
   }
 
-  // Evaluate with Claude
+  console.log(`[Evaluation] ✅ GUARDRAIL PASADO: ${llmCheck.reason}`);
+  console.log(`[Evaluation] ✅ Procediendo con evaluación LLM`);
+
+  // Evaluate with OpenAI
   const evaluation = await openaiService.evaluateCV(jobDescription, cvText);
 
   // Save to database
@@ -448,17 +496,24 @@ async function getEvaluationSummary(jobId) {
     const now = Date.now();
     
     if (cacheEntry && (now - cacheEntry.timestamp < candidateCountCache.TTL)) {
+      // Cache hit
+      console.log(`[Summary] Using cached candidate count for job ${jobId}`);
       totalCandidates = cacheEntry.count;
     } else {
+      // Cache miss - fetch from Lever (esto es lo lento)
+      console.log(`[Summary] Cache miss, fetching candidates from Lever for job ${jobId}`);
       try {
         const candidates = await leverService.getCandidates(jobId);
         totalCandidates = candidates.length;
+        
+        // Update cache
         candidateCountCache.data[jobId] = {
           count: totalCandidates,
           timestamp: now
         };
-      } catch {
-        totalCandidates = evaluated;
+      } catch (leverError) {
+        console.warn(`[Summary] Error fetching from Lever, using evaluated count as fallback:`, leverError.message);
+        totalCandidates = evaluated; // Fallback si Lever falla
       }
     }
 
@@ -476,6 +531,7 @@ async function getEvaluationSummary(jobId) {
       lastEvaluatedAt
     };
   } catch (error) {
+    console.error('Error getting evaluation summary:', error.message);
     throw error;
   }
 }
@@ -489,20 +545,6 @@ async function deleteEvaluation(id) {
   return result.rows[0];
 }
 
-/**
- * Delete multiple evaluations by IDs
- * @param {string[]} ids - Array of evaluation IDs to delete
- * @returns {Object[]} - Deleted evaluations
- */
-async function deleteEvaluationsBatch(ids) {
-  if (!ids || ids.length === 0) return [];
-
-  const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
-  const query = `DELETE FROM evaluations WHERE id IN (${placeholders}) RETURNING *`;
-  const result = await db.query(query, ids);
-  return result.rows;
-}
-
 module.exports = {
   evaluateCandidate,
   getCVText,
@@ -511,6 +553,5 @@ module.exports = {
   getEvaluations,
   getEvaluationStats,
   getEvaluationSummary,
-  deleteEvaluation,
-  deleteEvaluationsBatch
+  deleteEvaluation
 };

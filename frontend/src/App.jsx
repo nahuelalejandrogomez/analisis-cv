@@ -21,10 +21,6 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    // Redirect based on role
-    if (user?.role === 'administrator') {
-      return <Navigate to="/admin" replace />;
-    }
     return <Navigate to="/" replace />;
   }
 
@@ -32,7 +28,7 @@ function ProtectedRoute({ children, allowedRoles }) {
 }
 
 function PublicRoute({ children }) {
-  const { isAuthenticated, user, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return (
@@ -44,9 +40,6 @@ function PublicRoute({ children }) {
   }
 
   if (isAuthenticated) {
-    if (user?.role === 'administrator') {
-      return <Navigate to="/admin" replace />;
-    }
     return <Navigate to="/" replace />;
   }
 

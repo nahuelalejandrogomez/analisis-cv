@@ -24,6 +24,7 @@ export default function EvaluationDashboard({ jobId, onFilterChange, refreshTrig
       const data = await response.json();
       setSummary(data);
     } catch (err) {
+      console.error('Error loading evaluation summary:', err);
       setError(err.message);
     } finally {
       setLoading(false);
