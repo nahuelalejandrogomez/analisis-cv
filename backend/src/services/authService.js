@@ -6,7 +6,8 @@ const TOKEN_EXPIRY_REMEMBER = '30d';
 
 function getSecret() {
   if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is required');
+    console.error('[AuthService] CRITICAL: JWT_SECRET environment variable is not set!');
+    throw new Error('JWT_SECRET environment variable is required. Check Railway config.');
   }
   return JWT_SECRET;
 }

@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const { Pool } = require('pg');
 
 const UP = `
   CREATE TABLE IF NOT EXISTS users (
@@ -17,10 +17,25 @@ const UP = `
   CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 `;
 
-async function run() {
+async function run(pool) {
   console.log('[Migration 004] Creating users table...');
-  await db.query(UP);
+  
+  // If pool is not provided, create a temporary one
+  let tempPool = null;
+  if (!pool) {
+    tempPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    });
+    pool = tempPool;
+  }
+
+  await pool.query(UP);
   console.log('[Migration 004] Users table created successfully.');
+
+  if (tempPool) {
+    await tempPool.end();
+  }
 }
 
 module.exports = { run };

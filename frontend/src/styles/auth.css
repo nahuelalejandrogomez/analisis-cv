@@ -84,31 +84,42 @@
 
 .password-input-wrapper {
   position: relative;
+  display: flex;
+  align-items: stretch;
 }
 
 .password-input-wrapper input {
-  padding-right: 80px;
+  flex: 1;
+  padding-right: 90px;
 }
 
 .password-toggle {
   position: absolute;
-  right: 12px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  background: none;
+  background: transparent;
   border: none;
-  color: var(--gray-500);
+  color: var(--gray-600);
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   font-family: var(--font-family);
-  padding: 4px 8px;
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
-  transition: color 0.2s;
+  transition: all 0.2s;
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .password-toggle:hover {
   color: var(--red-primary);
+  background: var(--gray-50);
+}
+
+.password-toggle:focus {
+  outline: 2px solid var(--red-primary);
+  outline-offset: 2px;
 }
 
 .form-group-checkbox {
