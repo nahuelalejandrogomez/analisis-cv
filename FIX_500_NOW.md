@@ -1,19 +1,30 @@
 # 🚨 FIX RÁPIDO: Error 500 en Login
 
-## TL;DR - Ejecuta Esto Ahora
+## TL;DR - Ejecuta Estos 2 Comandos en Railway
 
 ```bash
-# En Railway Dashboard:
-# 1. Backend service → Deployments → último deploy → ••• → "Run Command"
-# 2. Ejecuta: npm run seed-admin
-# 3. Listo! Prueba el login
+# En Railway Dashboard → Backend → Deployments → último deploy → ••• → "Run Command":
+
+# 1. Primero ejecuta las migrations:
+npm run migrate
+
+# 2. Luego crea el admin:
+npm run seed-admin
+
+# 3. ¡Listo! Prueba el login
 ```
 
 ---
 
-## ¿Qué está pasando?
+## ⚠️ Problema Real (según logs)
 
-El backend está deployado pero la tabla `users` está **vacía**. Las migrations corrieron antes de que existiera el código para crear el usuario admin.
+```
+[Auth] DB query error: relation "users" does not exist
+```
+
+**La tabla `users` NO EXISTE** porque las migrations **NO corrieron** durante el deploy.
+
+El `postinstall` tiene `|| true` que hace que falle silenciosamente sin crear las tablas.
 
 ## Fix en 3 Pasos
 
@@ -24,28 +35,44 @@ El backend está deployado pero la tabla `users` está **vacía**. Las migration
 Deben existir:
 ```
 ADMIN_EMAIL=admin@redb.ee
-ADMIN_PASSWORD=<tu-password>
+ADMIN_PASSWORD=<tu-password-seguro>
 JWT_SECRET=<secret-largo>
 DATABASE_URL=<generado-automático>
+NODE_ENV=production
 ```
 
-Si faltan `ADMIN_EMAIL` o `ADMIN_PASSWORD`, agrégalas ahora.
+Si falta alguna, **agrégala ahora** (especialmente `ADMIN_EMAIL` y `ADMIN_PASSWORD`).
 
-### 2️⃣ Ejecuta el Script de Seed
+### 2️⃣ Ejecuta las Migrations + Seed
 
-**Método 1 - Railway Dashboard** (recomendado):
+**Railway Dashboard → Backend Service → Deployments → último deployment → "•••" → "Run Command"**
 
-1. Backend service → **Deployments**
-2. Click en el deployment más reciente
-3. Botón **"•••"** (arriba derecha) → **"Run Command"**
-4. Ingresa: `npm run seed-admin`
-5. Click **"Run"**
-
-**Método 2 - Railway CLI**:
-
+**Comando 1 - Crear tablas**:
 ```bash
-cd backend
-railway run npm run seed-admin
+npm run migrate
+```
+
+Espera a que termine. Deberías ver:
+```
+Starting database migrations...
+✓ Migration 001_create_tables.sql completed
+[Migration 004] Creating users table...
+✓ Users table created successfully.
+```
+
+**Comando 2 - Crear admin**:
+```bash
+npm run seed-admin
+```
+
+Deberías ver:
+```
+✓ Admin user created successfully!
+User details:
+   ID: 1
+   Email: admin@redb.ee
+   Name: Administrator
+   Role: administrator
 ```
 
 ### 3️⃣ Verifica que Funciona
@@ -74,15 +101,18 @@ curl -i -X POST https://analisis-cv-production.up.railway.app/api/auth/login \
 
 ## ¿Por qué pasó esto?
 
-1. Las migrations corrieron en Railway (crearon la tabla `users`)
-2. PERO el código del seed del admin **no existía en ese momento**
-3. Resultado: tabla vacía → login falla → 500
+1. Railway deployó el backend
+2. El `postinstall: "npm run migrate || true"` **falló silenciosamente**
+3. La tabla `users` nunca se creó
+4. Login intenta consultar `users` → error: "relation does not exist" → 500
 
 ## Fix Aplicado (ya en el código)
 
-- ✅ `run.js` ahora llama a `seedAdminUser(pool)` después de crear la tabla
+- ✅ `run.js` ahora ejecuta migration 004 + seed del admin automáticamente
 - ✅ Nuevo script `seed-admin.js` para crear el admin manualmente
-- ✅ El próximo deploy lo hará automáticamente
+- ✅ Logging mejorado para diagnosticar problemas
+
+**Pero necesitas ejecutar manualmente las migrations esta primera vez.**
 
 ## Troubleshooting
 
@@ -118,12 +148,34 @@ Luego ejecuta el seed nuevamente.
 
 | Paso | Comando | Dónde |
 |------|---------|-------|
-| 1 | Verifica variables `ADMIN_EMAIL` y `ADMIN_PASSWORD` | Railway Dashboard → Backend → Settings → Variables |
-| 2 | `npm run seed-admin` | Railway Dashboard → Backend → Deployments → Run Command |
-| 3 | Prueba el login | Frontend o curl |
+| 1 | Verifica todas las variables (especialmente `ADMIN_EMAIL`, `ADMIN_PASSWORD`) | Railway Dashboard → Backend → Settings → Variables |
+| 2 | `npm run migrate` | Railway Dashboard → Backend → Deployments → Run Command |
+| 3 | `npm run seed-admin` | Railway Dashboard → Backend → Deployments → Run Command |
+| 4 | Prueba el login | Frontend o curl |
 
-**Tiempo total**: ~2 minutos ⏱️
+**Tiempo total**: ~3 minutos ⏱️
 
 ---
 
 🎯 **Después del fix, el login debería devolver 200 OK con un token JWT.**
+
+## Alternativa: Railway CLI
+
+Si prefieres la terminal:
+
+```bash
+cd backend
+railway login
+railway link  # Selecciona tu proyecto y el servicio backend
+
+# Paso 1: Migrations
+railway run npm run migrate
+
+# Paso 2: Seed admin
+railway run npm run seed-admin
+
+# Paso 3: Verifica
+curl -X POST https://analisis-cv-production.up.railway.app/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@redb.ee","password":"TU_PASSWORD"}'
+```
