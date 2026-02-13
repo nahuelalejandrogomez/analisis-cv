@@ -50,7 +50,7 @@ async function runMigrations() {
     await usersModule.run(pool);
 
     // Seed admin user
-    await seedAdminUser();
+    await seedAdminUser(pool);
 
     console.log('All migrations completed!');
   } catch (error) {
@@ -62,7 +62,7 @@ async function runMigrations() {
   }
 }
 
-async function seedAdminUser() {
+async function seedAdminUser(pool) {
   console.log('[Seed] Checking admin user...');
 
   const adminEmail = process.env.ADMIN_EMAIL;

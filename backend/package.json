@@ -12,6 +12,7 @@
     "dev": "nodemon src/server.js",
     "migrate": "node src/migrations/run.js",
     "postinstall": "npm run migrate || true",
+    "seed-admin": "node scripts/seed-admin.js",
     "clear-db": "node scripts/clear-evaluations.js",
     "clear-db:confirm": "node scripts/clear-evaluations.js --confirm"
   },
