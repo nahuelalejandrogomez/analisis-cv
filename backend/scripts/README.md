@@ -1,6 +1,84 @@
 # 🗑️ Scripts de Utilidad
 
-## Clear Evaluations (Limpiar Base de Datos)
+## 1. Seed Admin User (Crear Usuario Administrador)
+
+Script para crear el usuario administrador inicial. **Necesario si las migrations corrieron antes del fix del seed automático.**
+
+### 🚨 ¿Cuándo usar este script?
+
+Si obtienes error 500 al hacer login y las migrations ya corrieron, probablemente la tabla `users` existe pero está vacía. Este script crea el admin manualmente.
+
+### 📦 Uso
+
+#### Opción A: Desde Railway Dashboard (Más Fácil)
+
+1. Ve a https://railway.app/dashboard
+2. Selecciona tu proyecto → servicio **backend**
+3. Verifica variables en **Settings → Variables**:
+   ```
+   ADMIN_EMAIL=admin@redb.ee
+   ADMIN_PASSWORD=<tu-password-seguro>
+   ```
+4. Ve a **Deployments** → último deployment → **"•••"** → **"Run Command"**
+5. Ejecuta:
+   ```bash
+   npm run seed-admin
+   ```
+
+#### Opción B: Desde Railway CLI
+
+```bash
+cd backend
+railway login
+railway link  # Selecciona tu proyecto
+railway run npm run seed-admin
+```
+
+### ✅ Output Esperado
+
+```
+========================================
+  Admin User Seed Script
+========================================
+
+📧 Admin email: admin@redb.ee
+
+[1/4] Checking users table...
+✓ Users table exists
+
+[2/4] Checking if admin user exists...
+✓ Admin user does not exist, will create
+
+[3/4] Hashing password...
+✓ Password hashed with bcrypt (12 rounds)
+
+[4/4] Creating admin user...
+✓ Admin user created successfully!
+
+User details:
+   ID: 1
+   Email: admin@redb.ee
+   Name: Administrator
+   Role: administrator
+
+========================================
+You can now login with these credentials!
+========================================
+```
+
+### 🔍 Verificación Post-Seed
+
+```bash
+curl -X POST https://analisis-cv-production.up.railway.app/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@redb.ee","password":"TU_PASSWORD"}'
+```
+
+Esperado: **HTTP 200** + token
+
+---
+
+## 2. Clear Evaluations (Limpiar Base de Datos)
 
 Script para borrar evaluaciones de la tabla `evaluations`.
 
