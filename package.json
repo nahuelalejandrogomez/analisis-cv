@@ -1,0 +1,12 @@
+{
+  "name": "lever-cv-evaluator",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "cd backend && npm start",
+    "install": "cd backend && npm install"
+  }
+}
