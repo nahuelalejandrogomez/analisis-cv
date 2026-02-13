@@ -999,5 +999,6 @@
 
 .td-actions {
   text-align: center;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-md);
+  vertical-align: middle;
 }

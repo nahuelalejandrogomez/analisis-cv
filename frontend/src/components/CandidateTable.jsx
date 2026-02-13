@@ -103,7 +103,7 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
               <th>Nombre</th>
               <th>Email</th>
               <th>LinkedIn</th>
-              <th>CV</th>
+              <th>Lever</th>
               <th>Estado</th>
               <th>Evaluacion</th>
               <th className="th-audit">Auditoría</th>
@@ -185,7 +185,7 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
                     <button
                       className="delete-btn"
                       onClick={() => onDeleteEvaluation(candidate)}
-                      title="Eliminar evaluación"
+                      title="Eliminar análisis"
                     >
                       🗑️
                     </button>
