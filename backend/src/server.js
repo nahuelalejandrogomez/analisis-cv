@@ -3,9 +3,30 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const routes = require('./routes');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+
+const execAsync = promisify(exec);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Run migrations on startup
+async function runMigrations() {
+  console.log('[Server] Checking and running migrations...');
+  try {
+    const { stdout, stderr } = await execAsync('node src/migrations/run.js', {
+      cwd: __dirname + '/..',
+      env: process.env
+    });
+    if (stdout) console.log(stdout);
+    if (stderr) console.error(stderr);
+    console.log('[Server] Migrations completed successfully');
+  } catch (error) {
+    console.error('[Server] Migration error:', error.message);
+    // Don't exit, let the server start anyway
+  }
+}
 
 // CORS configuration
 const allowedOrigins = [
@@ -49,6 +70,15 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Server] Running on port ${PORT}`);
+// Run migrations before starting server
+runMigrations().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Server] Running on port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('[Server] Failed to run migrations:', err);
+  // Start server anyway
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Server] Running on port ${PORT} (migrations may have failed)`);
+  });
 });
