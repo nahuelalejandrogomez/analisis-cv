@@ -28,23 +28,29 @@ async function runMigrations() {
   }
 }
 
-// CORS configuration
-const allowedOrigins = [
-  'http://localhost:3000',
-  process.env.FRONTEND_URL,
-  /\.railway\.app$/
-].filter(Boolean);
-
+// CORS configuration - Allow Railway domains
 app.use(cors({
   origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman)
     if (!origin) return callback(null, true);
-    const isAllowed = allowedOrigins.some(allowed => {
-      if (allowed instanceof RegExp) return allowed.test(origin);
-      return allowed === origin;
-    });
-    callback(null, isAllowed || true);
+    
+    // Allow localhost
+    if (origin.includes('localhost')) return callback(null, true);
+    
+    // Allow any Railway subdomain
+    if (origin.endsWith('.railway.app')) return callback(null, true);
+    
+    // Allow specific FRONTEND_URL if set
+    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
+      return callback(null, true);
+    }
+    
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    callback(null, false);
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json({ limit: '10mb' }));
