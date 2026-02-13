@@ -943,6 +943,7 @@
 .td-audit {
   text-align: center;
   width: 70px;
+  padding: var(--spacing-md) 0 !important;
 }
 
 .audit-btn {
@@ -1000,4 +1001,5 @@
 .td-actions {
   text-align: center;
   width: 70px;
+  padding: var(--spacing-md) 0 !important;
 }
