@@ -1,4 +1,10 @@
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
 function Header({ onEvaluate, onBulkDelete, evaluateCount, deleteCount, evaluating }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <header className="header">
       <div className="header-content">
@@ -38,6 +44,23 @@ function Header({ onEvaluate, onBulkDelete, evaluateCount, deleteCount, evaluati
               `Evaluar Seleccionados (${evaluateCount || 0})`
             )}
           </button>
+
+          <div className="header-user-section">
+            {user?.role === 'administrator' && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => navigate('/admin')}
+              >
+                Panel Admin
+              </button>
+            )}
+            <div className="user-info">
+              <span className="user-name">{user?.name}</span>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={logout}>
+              Salir
+            </button>
+          </div>
         </div>
       </div>
     </header>

@@ -4,6 +4,18 @@ const router = express.Router();
 const jobController = require('../controllers/jobController');
 const candidateController = require('../controllers/candidateController');
 const evaluationController = require('../controllers/evaluationController');
+const authRoutes = require('./auth');
+const adminRoutes = require('./admin');
+const { authenticate } = require('../middleware/auth');
+
+// Auth routes (login is public, /me is protected inside)
+router.use('/auth', authRoutes);
+
+// Admin routes (protected inside)
+router.use('/admin', adminRoutes);
+
+// All routes below require authentication
+router.use(authenticate);
 
 // Jobs
 router.get('/jobs', jobController.getJobs);

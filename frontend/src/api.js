@@ -1,15 +1,35 @@
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+function getAuthToken() {
+  return localStorage.getItem('token') || sessionStorage.getItem('token');
+}
+
 async function fetchAPI(endpoint, options = {}) {
   const url = `${API_URL}${endpoint}`;
+  const token = getAuthToken();
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   });
+
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    window.location.href = '/login';
+    throw new Error('Sesión expirada');
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
