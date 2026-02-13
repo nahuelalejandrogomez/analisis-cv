@@ -29,29 +29,22 @@ async function runMigrations() {
 }
 
 // CORS configuration - Allow Railway domains
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, Postman)
-    if (!origin) return callback(null, true);
-    
-    // Allow localhost
-    if (origin.includes('localhost')) return callback(null, true);
-    
-    // Allow any Railway subdomain
-    if (origin.endsWith('.railway.app')) return callback(null, true);
-    
-    // Allow specific FRONTEND_URL if set
-    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
-      return callback(null, true);
-    }
-    
-    console.warn(`[CORS] Blocked origin: ${origin}`);
-    callback(null, false);
-  },
+const corsOptions = {
+  origin: true, // Permite todos los orígenes temporalmente para debugging
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400 // 24 hours
+};
+
+app.use(cors(corsOptions));
+
+// Log CORS requests for debugging
+app.use((req, res, next) => {
+  console.log(`[CORS] ${req.method} ${req.path} from origin: ${req.headers.origin || 'no-origin'}`);
+  next();
+});
 
 app.use(express.json({ limit: '10mb' }));
 
