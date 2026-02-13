@@ -208,9 +208,7 @@ function Dashboard() {
     <div className="app">
       <Header
         onEvaluate={handleEvaluate}
-        onBulkDelete={handleBulkDelete}
-        evaluateCount={selectedCandidates.filter(c => !c.evaluated).length}
-        deleteCount={selectedCandidates.filter(c => c.evaluated && c.evaluation?.id).length}
+        selectedCount={selectedCandidates.filter(c => !c.evaluated).length}
         evaluating={evaluating}
       />
 
