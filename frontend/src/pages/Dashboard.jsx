@@ -130,38 +130,6 @@ function Dashboard() {
     }
   };
 
-  const handleBulkDelete = async () => {
-    const toDelete = selectedCandidates.filter(c => c.evaluated && c.evaluation?.id);
-    if (toDelete.length === 0) return;
-
-    const names = toDelete.map(c => c.name).join(', ');
-    const confirmDelete = window.confirm(
-      `Eliminar ${toDelete.length} evaluacion(es)?\n\n${names}\n\nEsto permitira volver a evaluar estos candidatos.`
-    );
-
-    if (!confirmDelete) return;
-
-    try {
-      const ids = toDelete.map(c => c.evaluation.id);
-      await api.deleteEvaluationsBatch(ids);
-
-      // Update local state
-      const deletedIds = new Set(toDelete.map(c => c.id));
-      setCandidates(prev =>
-        prev.map(c =>
-          deletedIds.has(c.id)
-            ? { ...c, evaluated: false, evaluation: null }
-            : c
-        )
-      );
-
-      setSelectedCandidates([]);
-      setSummaryRefreshTrigger(prev => prev + 1);
-    } catch (err) {
-      setError(`Error al eliminar evaluaciones: ${err.message}`);
-    }
-  };
-
   const handleFilterChange = (filter) => {
     setStatusFilter(filter);
   };
