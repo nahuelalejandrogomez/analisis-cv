@@ -4,7 +4,7 @@
   "description": "Backend for CV evaluation with Lever API and OpenAI",
   "main": "src/server.js",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "start": "node src/server.js",
