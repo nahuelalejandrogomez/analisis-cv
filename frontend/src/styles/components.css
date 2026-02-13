@@ -980,7 +980,6 @@
   cursor: pointer;
   transition: all 0.2s ease;
   opacity: 0.6;
-  line-height: 1;
 }
 
 .delete-btn:hover {
@@ -1000,7 +999,11 @@
 
 .td-actions {
   text-align: center;
-  padding: 8px;
-  vertical-align: middle;
-  height: 60px;
+  width: 70px;
+}
+
+.td-actions .delete-btn,
+.td-actions .action-empty {
+  display: inline-block;
+  margin: 0 auto;
 }
