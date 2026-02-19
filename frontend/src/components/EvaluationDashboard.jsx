@@ -1,44 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import * as api from '../api';
+import React, { useState } from 'react';
 
 /**
- * Dashboard with KPI cards for evaluation summary
- * Cards are clickable to filter candidates by status
+ * Dashboard with KPI cards computed directly from the candidates array.
+ * This ensures counts always match what's shown in the table.
  */
-export default function EvaluationDashboard({ jobId, onFilterChange, refreshTrigger }) {
-  const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function EvaluationDashboard({ candidates = [], onFilterChange }) {
   const [activeFilter, setActiveFilter] = useState(null);
 
-  async function loadSummary() {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const data = await api.getEvaluationSummary(jobId);
-      setSummary(data);
-    } catch (err) {
-      console.error('Error loading evaluation summary:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Compute summary from the live candidates array
+  const total = candidates.length;
+  const verde    = candidates.filter(c => c.evaluated && c.evaluation?.status === 'VERDE').length;
+  const amarillo = candidates.filter(c => c.evaluated && c.evaluation?.status === 'AMARILLO').length;
+  const rojo     = candidates.filter(c => c.evaluated && c.evaluation?.status === 'ROJO').length;
+  const evaluated = candidates.filter(c => c.evaluated).length;
+  const pending  = total - evaluated;
 
-  useEffect(() => {
-    if (!jobId) {
-      setSummary(null);
-      setLoading(false);
-      return;
-    }
+  const lastEvaluatedAt = candidates
+    .filter(c => c.evaluated && c.evaluation?.evaluatedAt)
+    .map(c => new Date(c.evaluation.evaluatedAt))
+    .sort((a, b) => b - a)[0] || null;
 
-    loadSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId, refreshTrigger]); // CAMBIO: Agregado refreshTrigger
+  const evaluatedPercentage = total > 0 ? Math.round((evaluated / total) * 100) : 0;
 
   function handleCardClick(status) {
-    // Toggle filter: if already active, reset; otherwise set new filter
     const newFilter = activeFilter === status ? null : status;
     setActiveFilter(newFilter);
     onFilterChange(newFilter);
@@ -49,29 +33,7 @@ export default function EvaluationDashboard({ jobId, onFilterChange, refreshTrig
     onFilterChange(null);
   }
 
-  if (loading) {
-    return (
-      <div className="dashboard">
-        <div className="dashboard-loading">Cargando estadísticas...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="dashboard">
-        <div className="dashboard-error">Error: {error}</div>
-      </div>
-    );
-  }
-
-  if (!summary) {
-    return null;
-  }
-
-  const evaluatedPercentage = summary.total > 0 
-    ? Math.round((summary.evaluated / summary.total) * 100) 
-    : 0;
+  if (total === 0) return null;
 
   return (
     <div className="dashboard">
@@ -86,68 +48,68 @@ export default function EvaluationDashboard({ jobId, onFilterChange, refreshTrig
 
       <div className="kpi-grid">
         {/* Total Candidates */}
-        <div 
+        <div
           className={`kpi-card ${activeFilter === null ? 'active' : ''}`}
           onClick={() => handleCardClick(null)}
         >
           <div className="kpi-label">Total Candidatos</div>
-          <div className="kpi-value">{summary.total}</div>
+          <div className="kpi-value">{total}</div>
           <div className="kpi-detail">{evaluatedPercentage}% evaluado</div>
         </div>
 
         {/* VERDE */}
-        <div 
+        <div
           className={`kpi-card kpi-verde ${activeFilter === 'VERDE' ? 'active' : ''}`}
           onClick={() => handleCardClick('VERDE')}
         >
           <div className="kpi-label">VERDE</div>
-          <div className="kpi-value">{summary.verde}</div>
+          <div className="kpi-value">{verde}</div>
           <div className="kpi-detail">
-            {summary.total > 0 ? Math.round((summary.verde / summary.total) * 100) : 0}% del total
+            {total > 0 ? Math.round((verde / total) * 100) : 0}% del total
           </div>
         </div>
 
         {/* AMARILLO */}
-        <div 
+        <div
           className={`kpi-card kpi-amarillo ${activeFilter === 'AMARILLO' ? 'active' : ''}`}
           onClick={() => handleCardClick('AMARILLO')}
         >
           <div className="kpi-label">AMARILLO</div>
-          <div className="kpi-value">{summary.amarillo}</div>
+          <div className="kpi-value">{amarillo}</div>
           <div className="kpi-detail">
-            {summary.total > 0 ? Math.round((summary.amarillo / summary.total) * 100) : 0}% del total
+            {total > 0 ? Math.round((amarillo / total) * 100) : 0}% del total
           </div>
         </div>
 
         {/* ROJO */}
-        <div 
+        <div
           className={`kpi-card kpi-rojo ${activeFilter === 'ROJO' ? 'active' : ''}`}
           onClick={() => handleCardClick('ROJO')}
         >
           <div className="kpi-label">ROJO</div>
-          <div className="kpi-value">{summary.rojo}</div>
+          <div className="kpi-value">{rojo}</div>
           <div className="kpi-detail">
-            {summary.total > 0 ? Math.round((summary.rojo / summary.total) * 100) : 0}% del total
+            {total > 0 ? Math.round((rojo / total) * 100) : 0}% del total
           </div>
         </div>
 
         {/* SIN EVALUAR */}
-        <div 
+        <div
           className={`kpi-card kpi-pending ${activeFilter === 'PENDING' ? 'active' : ''}`}
           onClick={() => handleCardClick('PENDING')}
         >
           <div className="kpi-label">SIN EVALUAR</div>
-          <div className="kpi-value">{summary.pending}</div>
+          <div className="kpi-value">{pending}</div>
           <div className="kpi-detail">
-            {summary.total > 0 ? Math.round((summary.pending / summary.total) * 100) : 0}% del total
+            {total > 0 ? Math.round((pending / total) * 100) : 0}% del total
           </div>
         </div>
       </div>
 
-      {summary.lastEvaluatedAt && (
+      {lastEvaluatedAt && (
         <div className="dashboard-footer">
           <span className="last-evaluation">
-            Última evaluación: {new Date(summary.lastEvaluatedAt).toLocaleString('es-AR')}
+            Última evaluación: {lastEvaluatedAt.toLocaleString('es-AR')}
           </span>
         </div>
       )}

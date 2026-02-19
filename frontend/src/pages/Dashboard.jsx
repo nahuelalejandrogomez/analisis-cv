@@ -29,7 +29,6 @@ function Dashboard() {
     }
   });
   const [cvModalCandidate, setCvModalCandidate] = useState(null);
-  const [summaryRefreshTrigger, setSummaryRefreshTrigger] = useState(0);
   const [selectedCandidates, setSelectedCandidates] = useState([]);
 
   // Load jobs on mount
@@ -135,7 +134,6 @@ function Dashboard() {
     } finally {
       setEvaluating(false);
       setSelectedCandidates([]);
-      setSummaryRefreshTrigger(prev => prev + 1);
     }
   };
 
@@ -218,9 +216,8 @@ function Dashboard() {
         {selectedJob && (
           <>
             <EvaluationDashboard
-              jobId={selectedJob.id}
+              candidates={candidates}
               onFilterChange={handleFilterChange}
-              refreshTrigger={summaryRefreshTrigger}
             />
 
             <JobContextPanel job={selectedJob} />
