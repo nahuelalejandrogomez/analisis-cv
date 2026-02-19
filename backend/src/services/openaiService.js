@@ -33,7 +33,7 @@ Responde ÚNICAMENTE en JSON (sin markdown, sin explicación adicional):
 
 **CRITERIO - PAÍS DE RESIDENCIA:**
 - "job_country": extrae el país de la búsqueda del campo "Ubicación:" del job o de cualquier mención explícita en la descripción. Si dice "Remote", "Anywhere" o no se especifica, usa "Argentina".
-- "candidate_country": detecta el país de residencia actual del candidato en el CV (dirección, ciudad, menciones como "vivo en X" o "based in X"). Si el CV no menciona país, devuelve null.
+- "candidate_country": detecta el país de residencia actual del candidato en el CV (dirección, ciudad, menciones como "vivo en X" o "based in X"). Si el CV no menciona país, usa el mismo valor que "job_country". NUNCA devuelvas null ni "null".
 
 **IMPORTANTE:**
 Considera variantes de tecnologías (NestJS = Nest.js, Node.js = NodeJS, etc.)
@@ -145,8 +145,15 @@ async function evaluateCV(jobDescription, cvText) {
     }
 
     // COUNTRY MISMATCH CHECK (post-guardrail)
-    const candidateCountry = evaluation.candidate_country || null;
-    const jobCountry = evaluation.job_country || 'Argentina';
+    const jobCountry = (evaluation.job_country || 'Argentina').trim();
+    // Normalize candidate_country: treat "null", empty string, or missing as the job country (no mismatch)
+    const rawCandidateCountry = evaluation.candidate_country;
+    const candidateCountry = (
+      rawCandidateCountry &&
+      typeof rawCandidateCountry === 'string' &&
+      rawCandidateCountry.trim().toLowerCase() !== 'null' &&
+      rawCandidateCountry.trim() !== ''
+    ) ? rawCandidateCountry.trim() : jobCountry;
 
     if (candidateCountry) {
       const normalize = (s) => s.toLowerCase().trim()
