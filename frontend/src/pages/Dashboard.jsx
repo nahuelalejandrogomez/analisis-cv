@@ -173,7 +173,6 @@ function Dashboard() {
       }
 
       loadCandidates(selectedJob.id);
-      setSummaryRefreshTrigger(prev => prev + 1);
       alert(`Evaluacion de ${candidate.name} eliminada correctamente.\n\nYa puedes volver a evaluar con el CV actualizado.`);
     } catch (err) {
       console.error('Error deleting evaluation:', err);
