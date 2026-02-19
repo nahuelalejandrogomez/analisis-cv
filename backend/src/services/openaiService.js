@@ -21,13 +21,19 @@ Evalúa si el candidato aplica para esta posición.
 Responde ÚNICAMENTE en JSON (sin markdown, sin explicación adicional):
 {
   "status": "VERDE" | "AMARILLO" | "ROJO",
-  "reasoning": "Máximo 30 palabras explicando por qué ese color"
+  "reasoning": "Máximo 30 palabras explicando por qué ese color",
+  "job_country": "país de la búsqueda",
+  "candidate_country": "país de residencia del candidato o null"
 }
 
 **CRITERIOS:**
 - VERDE: Cumple 100% de requisitos técnicos + experiencia
 - AMARILLO: Cumple 70-90% de requisitos, falta algo menor
 - ROJO: Cumple <70% de requisitos o falta tech crítica
+
+**CRITERIO - PAÍS DE RESIDENCIA:**
+- "job_country": extrae el país de la búsqueda del campo "Ubicación:" del job o de cualquier mención explícita en la descripción. Si dice "Remote", "Anywhere" o no se especifica, usa "Argentina".
+- "candidate_country": detecta el país de residencia actual del candidato en el CV (dirección, ciudad, menciones como "vivo en X" o "based in X"). Si el CV no menciona país, devuelve null.
 
 **IMPORTANTE:**
 Considera variantes de tecnologías (NestJS = Nest.js, Node.js = NodeJS, etc.)
@@ -63,7 +69,7 @@ async function evaluateCV(jobDescription, cvText) {
 
     const response = await openai.chat.completions.create({
       model: OPENAI_MODEL,
-      max_tokens: 200,
+      max_tokens: 300,
       messages: [
         {
           role: 'user',
@@ -138,11 +144,39 @@ async function evaluateCV(jobDescription, cvText) {
       console.warn('⚠️  [Guardrail] Error en verificación, manteniendo reasoning original:', guardrailError.message);
     }
 
-    // Limitar a 30 palabras
+    // COUNTRY MISMATCH CHECK (post-guardrail)
+    const candidateCountry = evaluation.candidate_country || null;
+    const jobCountry = evaluation.job_country || 'Argentina';
+
+    if (candidateCountry) {
+      const normalize = (s) => s.toLowerCase().trim()
+        .replace(/^república\s+/i, '')
+        .replace(/^the\s+/i, '');
+
+      if (normalize(candidateCountry) !== normalize(jobCountry)) {
+        console.log(`[Country] Mismatch: candidato en "${candidateCountry}", búsqueda para "${jobCountry}"`);
+
+        if (evaluation.status === 'VERDE') {
+          evaluation.status = 'AMARILLO';
+          console.log('[Country] Status downgradado VERDE → AMARILLO por mismatch de país');
+        }
+
+        const countryObs = `Reside en ${candidateCountry}, búsqueda para ${jobCountry}. Considerar relocation/remoto.`;
+        evaluation.reasoning = `${countryObs} ${evaluation.reasoning}`;
+        evaluation.country_mismatch = true;
+      } else {
+        console.log(`[Country] OK: candidato en "${candidateCountry}", coincide con job`);
+      }
+    } else {
+      console.log('[Country] País del candidato no detectado en CV, sin chequeo de mismatch');
+    }
+
+    // Limitar palabras: 50 si hay mismatch de país, 30 en caso normal
+    const wordLimit = evaluation.country_mismatch ? 50 : 30;
     const words = evaluation.reasoning.split(/\s+/);
-    if (words.length > 30) {
-      console.log(`[Guardrail] Reasoning excede 30 palabras (${words.length}). Truncando...`);
-      evaluation.reasoning = words.slice(0, 30).join(' ') + '...';
+    if (words.length > wordLimit) {
+      console.log(`[Guardrail] Reasoning excede ${wordLimit} palabras (${words.length}). Truncando...`);
+      evaluation.reasoning = words.slice(0, wordLimit).join(' ') + '...';
     }
 
     console.log(`✅ Evaluación completada: ${evaluation.status}`);
