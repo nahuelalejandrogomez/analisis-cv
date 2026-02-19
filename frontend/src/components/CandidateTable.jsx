@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import StageFilter from './StageFilter';
 
-function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEvaluation, selectedCandidates, onSelectionChange }) {
+function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEvaluation, selectedCandidates, onSelectionChange, stageFilter = [], onStageFilterChange }) {
   const [selected, setSelected] = useState([]);
 
   // Sincronizar selección interna con prop externa
@@ -10,8 +11,7 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      // Select only candidates not yet evaluated
-      const newSelected = candidates.filter(c => !c.evaluated);
+      const newSelected = displayCandidates.filter(c => !c.evaluated);
       setSelected(newSelected.map(c => c.id));
       onSelectionChange(newSelected);
     } else {
@@ -49,6 +49,10 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
     );
   };
 
+  const displayCandidates = stageFilter.length === 0
+    ? candidates
+    : candidates.filter(c => stageFilter.includes(c.stage));
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -67,7 +71,7 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
     );
   }
 
-  const unevaluatedCount = candidates.filter(c => !c.evaluated).length;
+  const unevaluatedCount = displayCandidates.filter(c => !c.evaluated).length;
   const selectedCount = selected.length;
 
   return (
@@ -88,6 +92,17 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
         </div>
       </div>
 
+      <StageFilter
+        candidates={candidates}
+        selectedStages={stageFilter}
+        onChange={onStageFilterChange}
+      />
+
+      {displayCandidates.length === 0 ? (
+        <div className="stage-empty-state">
+          <p>No hay candidatos para los steps seleccionados. Seleccioná otra etapa o hacé clic en <strong>Limpiar</strong> para ver todos.</p>
+        </div>
+      ) : (
       <div className="table-wrapper">
         <table className="candidate-table">
           <thead>
@@ -111,7 +126,7 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
             </tr>
           </thead>
           <tbody>
-            {candidates.map(candidate => (
+            {displayCandidates.map(candidate => (
               <tr
                 key={candidate.id}
                 className={selected.includes(candidate.id) ? 'row-selected' : ''}
@@ -198,6 +213,7 @@ function CandidateTable({ candidates, loading, evaluating, onViewCV, onDeleteEva
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }

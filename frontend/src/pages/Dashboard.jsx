@@ -20,6 +20,14 @@ function Dashboard() {
   const [evaluationResults, setEvaluationResults] = useState([]);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState(null);
+  const [stageFilter, setStageFilter] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cv_evaluator_stage_filter');
+      return saved ? JSON.parse(saved) : ['New applicant'];
+    } catch {
+      return ['New applicant'];
+    }
+  });
   const [cvModalCandidate, setCvModalCandidate] = useState(null);
   const [summaryRefreshTrigger, setSummaryRefreshTrigger] = useState(0);
   const [selectedCandidates, setSelectedCandidates] = useState([]);
@@ -59,6 +67,7 @@ function Dashboard() {
   const handleJobSelect = async (job) => {
     setEvaluationResults([]);
     setStatusFilter(null);
+    setStageFilter(['New applicant']);
 
     if (job) {
       try {
@@ -129,6 +138,11 @@ function Dashboard() {
       setSummaryRefreshTrigger(prev => prev + 1);
     }
   };
+
+  // Persist stageFilter to localStorage
+  useEffect(() => {
+    localStorage.setItem('cv_evaluator_stage_filter', JSON.stringify(stageFilter));
+  }, [stageFilter]);
 
   const handleFilterChange = (filter) => {
     setStatusFilter(filter);
@@ -218,6 +232,8 @@ function Dashboard() {
               onDeleteEvaluation={handleDeleteEvaluation}
               selectedCandidates={selectedCandidates}
               onSelectionChange={setSelectedCandidates}
+              stageFilter={stageFilter}
+              onStageFilterChange={setStageFilter}
             />
 
             {evaluationResults.length > 0 && (
