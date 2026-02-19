@@ -146,6 +146,7 @@ function Dashboard() {
 
   const handleFilterChange = (filter) => {
     setStatusFilter(filter);
+    setStageFilter([]);
   };
 
   const handleDeleteEvaluation = async (candidate) => {

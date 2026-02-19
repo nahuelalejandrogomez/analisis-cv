@@ -131,18 +131,6 @@ export default function EvaluationDashboard({ jobId, onFilterChange, refreshTrig
           </div>
         </div>
 
-        {/* ERROR */}
-        <div 
-          className={`kpi-card kpi-error ${activeFilter === 'ERROR' ? 'active' : ''}`}
-          onClick={() => handleCardClick('ERROR')}
-        >
-          <div className="kpi-label">ERROR</div>
-          <div className="kpi-value">{summary.error || 0}</div>
-          <div className="kpi-detail">
-            Sin CV disponible
-          </div>
-        </div>
-
         {/* SIN EVALUAR */}
         <div 
           className={`kpi-card kpi-pending ${activeFilter === 'PENDING' ? 'active' : ''}`}
